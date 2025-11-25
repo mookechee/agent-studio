@@ -6,7 +6,6 @@ use gpui::{
 
 use gpui_component::group_box::{GroupBox, GroupBoxVariants as _};
 use gpui_component::label::Label;
-use gpui_component::tag::Tag;
 use gpui_component::{ActiveTheme, IconName, StyledExt, h_flex};
 use gpui_component::{
     Sizable,

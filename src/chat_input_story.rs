@@ -57,7 +57,7 @@ impl Focusable for ChatInputStory {
 }
 
 impl Render for ChatInputStory {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         v_flex()
             .size_full()
             .gap_4()

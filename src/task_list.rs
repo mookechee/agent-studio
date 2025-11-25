@@ -1,8 +1,8 @@
-use std::{rc::Rc, time::Duration};
+use std::{cell::RefCell, collections::HashSet, rc::Rc, time::Duration};
 
 use fake::Fake;
 use gpui::{
-    App, AppContext, ClickEvent, Context, ElementId, Entity, FocusHandle, Focusable, InteractiveElement, IntoElement, ParentElement, Render, RenderOnce, SharedString, Styled, Subscription, Task, Timer, Window, actions, div, px, prelude::FluentBuilder
+    App, AppContext, ClickEvent, Context, ElementId, Entity, FocusHandle, Focusable, InteractiveElement, IntoElement, MouseButton, ParentElement, Render, RenderOnce, SharedString, Styled, Subscription, Task, Timer, Window, actions, div, px, prelude::FluentBuilder
 };
 
 use gpui_component::{
@@ -152,28 +152,27 @@ impl RenderOnce for TaskListItem {
                                     .whitespace_nowrap()
                                     .child(self.agent_task.name.clone())
                             )
-                            .when(show_metadata, |this| {
-                                this.child(
-                                    // Subtitle with metadata - conditionally shown
-                                    h_flex()
-                                        .gap_1()
-                                        .text_size(px(11.))
-                                        .text_color(muted_color)
-                                        .child("2 Files ")
-                                        .child(
-                                            div()
-                                                .text_color(add_color)
-                                                .child(self.agent_task.add_new_code_lines_str.clone())
-                                        )
-                                        .child(
-                                            div()
-                                                .text_color(delete_color)
-                                                .child(self.agent_task.delete_code_lines_str.clone())
-                                        )
-                                        .child(" · ")
-                                        .child(self.agent_task.task_type.clone())
-                                )
-                            })
+                            .child(
+                                // Subtitle with metadata - conditionally shown
+                                h_flex()
+                                    .gap_1()
+                                    .text_size(px(11.))
+                                    .text_color(muted_color)
+                                    .child("2 Files ")
+                                    .child(
+                                        div()
+                                            .text_color(add_color)
+                                            .child(self.agent_task.add_new_code_lines_str.clone())
+                                    )
+                                    .child(
+                                        div()
+                                            .text_color(delete_color)
+                                            .child(self.agent_task.delete_code_lines_str.clone())
+                                    )
+                                    .child(" · ")
+                                    .child(self.agent_task.task_type.clone())
+                            )
+
                     )
             )
     }
@@ -189,9 +188,24 @@ struct TaskListDelegate {
     loading: bool,
     eof: bool,
     lazy_load: bool,
+    // Track which sections are collapsed (using RefCell for interior mutability)
+    collapsed_sections: Rc<RefCell<HashSet<usize>>>,
 }
 
 impl TaskListDelegate {
+    fn toggle_section_collapsed(&self, section: usize) {
+        let mut collapsed = self.collapsed_sections.borrow_mut();
+        if collapsed.contains(&section) {
+            collapsed.remove(&section);
+        } else {
+            collapsed.insert(section);
+        }
+    }
+
+    fn is_section_collapsed(&self, section: usize) -> bool {
+        self.collapsed_sections.borrow().contains(&section)
+    }
+
     fn prepare(&mut self, query: impl Into<SharedString>) {
         self.query = query.into();
         let agent_tasks: Vec<Rc<AgentTask>> = self
@@ -241,7 +255,12 @@ impl ListDelegate for TaskListDelegate {
     }
 
     fn items_count(&self, section: usize, _: &App) -> usize {
-        self.matched_agent_tasks[section].len()
+        // Return 0 items if the section is collapsed
+        if self.is_section_collapsed(section) {
+            0
+        } else {
+            self.matched_agent_tasks[section].len()
+        }
     }
 
     fn perform_search(
@@ -279,13 +298,43 @@ impl ListDelegate for TaskListDelegate {
             return None;
         };
 
+        let is_collapsed = self.is_section_collapsed(section);
+        let collapsed_sections = self.collapsed_sections.clone();
+
+        // Use ChevronRight when collapsed, ChevronDown when expanded
+        let chevron_icon = if is_collapsed {
+            IconName::ChevronRight
+        } else {
+            IconName::ChevronDown
+        };
+
         Some(
-            h_flex()
+            div()
+                .flex()
+                .flex_row()
+                .items_center()
                 .pb_1()
                 .px_2()
                 .gap_2()
                 .text_sm()
                 .text_color(cx.theme().muted_foreground)
+                .cursor_default()
+                .rounded(cx.theme().radius)
+                .hover(|style| {
+                    style.bg(cx.theme().secondary)
+                })
+                .on_mouse_down(MouseButton::Left, move |_, window, _cx| {
+                    // Toggle the collapsed state
+                    let mut collapsed = collapsed_sections.borrow_mut();
+                    if collapsed.contains(&section) {
+                        collapsed.remove(&section);
+                    } else {
+                        collapsed.insert(section);
+                    }
+                    // Request a refresh to update the UI
+                    window.refresh();
+                })
+                .child(Icon::new(chevron_icon).size(px(14.)))
                 .child(Icon::new(IconName::Folder))
                 .child(task_type.clone()),
         )
@@ -395,6 +444,7 @@ impl ListStory {
             loading: false,
             eof: false,
             lazy_load: false,
+            collapsed_sections: Rc::new(RefCell::new(HashSet::new())),
         };
         delegate.extend_more(100);
 
