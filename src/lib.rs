@@ -8,6 +8,7 @@ mod menu;
 mod task_list;
 mod task_turn_view;
 mod task_schema;
+mod task_data;
 mod welcome_panel;
 mod settings_window;
 
