@@ -462,11 +462,66 @@ impl ConversationPanelAcp {
     fn new(_window: &mut Window, cx: &mut App) -> Self {
         let focus_handle = cx.focus_handle();
         let session_updates = Self::load_mock_data();
-        let rendered_items = Self::process_session_updates(session_updates, cx);
+
+        let mut rendered_items = Vec::new();
+        for (index, update) in session_updates.into_iter().enumerate() {
+            Self::add_update_to_list(&mut rendered_items, update, index, cx);
+        }
 
         Self {
             focus_handle,
             rendered_items,
+        }
+    }
+
+    /// Helper to add an update to the rendered items list
+    fn add_update_to_list(
+        items: &mut Vec<RenderedItem>,
+        update: SessionUpdate,
+        index: usize,
+        cx: &mut App,
+    ) {
+        match update {
+            SessionUpdate::UserMessageChunk(chunk) => {
+                items.push(Self::create_user_message(chunk, index, cx));
+            }
+            SessionUpdate::AgentMessageChunk(chunk) => {
+                let data = Self::create_agent_message_data(chunk, index);
+                items.push(RenderedItem::AgentMessage(
+                    format!("agent-msg-{}", index),
+                    data,
+                ));
+            }
+            SessionUpdate::AgentThoughtChunk(chunk) => {
+                let text = Self::extract_text_from_content(&chunk.content);
+                items.push(RenderedItem::AgentThought(text));
+            }
+            SessionUpdate::ToolCall(tool_call) => {
+                let entity = cx.new(|_| ToolCallItemState::new(tool_call, false));
+                items.push(RenderedItem::ToolCall(entity));
+            }
+            SessionUpdate::ToolCallUpdate(tool_call_update) => {
+                items.push(RenderedItem::ToolCallUpdate(format!(
+                    "Tool Call Update: {}",
+                    tool_call_update.tool_call_id
+                )));
+            }
+            SessionUpdate::Plan(plan) => {
+                items.push(RenderedItem::Plan(plan));
+            }
+            SessionUpdate::AvailableCommandsUpdate(commands_update) => {
+                items.push(RenderedItem::CommandsUpdate(format!(
+                    "Available Commands: {} commands",
+                    commands_update.available_commands.len()
+                )));
+            }
+            SessionUpdate::CurrentModeUpdate(mode_update) => {
+                items.push(RenderedItem::ModeUpdate(format!(
+                    "Mode Update: {}",
+                    mode_update.current_mode_id
+                )));
+            }
+            _ => {}
         }
     }
 
@@ -480,64 +535,6 @@ impl ConversationPanelAcp {
                 Vec::new()
             }
         }
-    }
-
-    /// Process session updates into rendered items
-    fn process_session_updates(
-        updates: Vec<SessionUpdate>,
-        cx: &mut App,
-    ) -> Vec<RenderedItem> {
-        let mut rendered_items = Vec::new();
-        let mut index = 0;
-
-        for update in updates {
-            match update {
-                SessionUpdate::UserMessageChunk(chunk) => {
-                    rendered_items.push(Self::create_user_message(chunk, index, cx));
-                }
-                SessionUpdate::AgentMessageChunk(chunk) => {
-                    let data = Self::create_agent_message_data(chunk, index);
-                    rendered_items.push(RenderedItem::AgentMessage(
-                        format!("agent-msg-{}", index),
-                        data,
-                    ));
-                }
-                SessionUpdate::AgentThoughtChunk(chunk) => {
-                    let text = Self::extract_text_from_content(&chunk.content);
-                    rendered_items.push(RenderedItem::AgentThought(text));
-                }
-                SessionUpdate::ToolCall(tool_call) => {
-                    let entity = cx.new(|_| ToolCallItemState::new(tool_call, false));
-                    rendered_items.push(RenderedItem::ToolCall(entity));
-                }
-                SessionUpdate::ToolCallUpdate(tool_call_update) => {
-                    rendered_items.push(RenderedItem::ToolCallUpdate(format!(
-                        "Tool Call Update: {}",
-                        tool_call_update.tool_call_id
-                    )));
-                }
-                SessionUpdate::Plan(plan) => {
-                    rendered_items.push(RenderedItem::Plan(plan));
-                }
-                SessionUpdate::AvailableCommandsUpdate(commands_update) => {
-                    rendered_items.push(RenderedItem::CommandsUpdate(format!(
-                        "Available Commands: {} commands",
-                        commands_update.available_commands.len()
-                    )));
-                }
-                SessionUpdate::CurrentModeUpdate(mode_update) => {
-                    rendered_items.push(RenderedItem::ModeUpdate(format!(
-                        "Mode Update: {}",
-                        mode_update.current_mode_id
-                    )));
-                }
-                // Handle any future variants
-                _ => {}
-            }
-            index += 1;
-        }
-
-        rendered_items
     }
 
     fn create_user_message(

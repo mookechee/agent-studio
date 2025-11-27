@@ -1,4 +1,5 @@
 pub mod acp_client;
+pub mod gui_client;
 mod app;
 mod chat_input;
 mod code_editor;
@@ -8,6 +9,7 @@ mod conversation;
 mod conversation_acp;
 pub mod dock_panel;
 mod schemas;
+mod session_bus;
 mod settings_window;
 mod task_data;
 mod task_list;
@@ -21,6 +23,7 @@ use std::sync::Arc;
 use crate::{
     acp_client::{AgentManager, PermissionStore},
     dock_panel::{DockPanel, DockPanelContainer, DockPanelState},
+    session_bus::SessionUpdateBusContainer,
 };
 pub use app::{app_menus, menu, themes, title_bar};
 pub use chat_input::ChatInputPanel;
@@ -105,6 +108,7 @@ pub struct AppState {
     pub invisible_panels: Entity<Vec<SharedString>>,
     agent_manager: Option<Arc<AgentManager>>,
     permission_store: Option<Arc<PermissionStore>>,
+    pub session_bus: SessionUpdateBusContainer,
 }
 
 impl AppState {
@@ -113,6 +117,7 @@ impl AppState {
             invisible_panels: cx.new(|_| Vec::new()),
             agent_manager: None,
             permission_store: None,
+            session_bus: SessionUpdateBusContainer::new(),
         };
         cx.set_global::<AppState>(state);
     }

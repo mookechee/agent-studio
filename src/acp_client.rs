@@ -630,7 +630,7 @@ pub struct PermissionStore {
 }
 
 impl PermissionStore {
-    async fn add(
+    pub async fn add(
         &self,
         agent: String,
         session_id: String,
