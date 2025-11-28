@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::HashSet, rc::Rc, time::Duration};
 
 use gpui::{
-    actions, div, px, App, AppContext, Context, Entity, FocusHandle, Focusable, InteractiveElement,
+    actions, div, px, Action, App, AppContext, Context, Entity, FocusHandle, Focusable, InteractiveElement,
     IntoElement, MouseButton, ParentElement, Render, SharedString, Styled, Subscription, Task,
     Timer, Window,
 };
@@ -11,13 +11,23 @@ use gpui_component::{
     list::{List, ListDelegate, ListEvent, ListState},
     v_flex, ActiveTheme, Icon, IconName, IndexPath,
 };
+use serde::Deserialize;
+
+use agent_client_protocol_schema::{ContentBlock, SessionUpdate};
 
 use crate::components::TaskListItem;
 use crate::task_data::{load_mock_tasks, random_status};
 use crate::task_schema::{AgentTask, TaskStatus};
-use crate::{CreateTaskFromWelcome, ShowConversationPanel, ShowWelcomePanel};
+use crate::{AppState, CreateTaskFromWelcome, ShowConversationPanel, ShowWelcomePanel};
 
 actions!(list_task, [SelectedAgentTask]);
+
+#[derive(Clone, Action, PartialEq, Eq, Deserialize)]
+#[action(namespace = list_task, no_json)]
+pub struct AddSessionToList {
+    pub session_id: String,
+    pub task_name: String,
+}
 
 struct TaskListDelegate {
     industries: Vec<SharedString>,
@@ -361,7 +371,12 @@ impl crate::dock_panel::DockPanel for ListTaskPanel {
 
 impl ListTaskPanel {
     pub fn view(window: &mut Window, cx: &mut App) -> Entity<Self> {
-        cx.new(|cx| Self::new(window, cx))
+        let entity = cx.new(|cx| Self::new(window, cx));
+
+        // Subscribe to session bus for all session updates
+        Self::subscribe_to_session_updates(&entity, cx);
+
+        entity
     }
 
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
@@ -435,6 +450,95 @@ impl ListTaskPanel {
         }
     }
 
+    /// Subscribe to session bus to update task subtitles with message previews
+    fn subscribe_to_session_updates(entity: &Entity<Self>, cx: &mut App) {
+        let weak_entity = entity.downgrade();
+        let session_bus = AppState::global(cx).session_bus.clone();
+
+        // Create channel for cross-thread communication
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<(String, SessionUpdate)>();
+
+        // Subscribe to all session updates
+        session_bus.subscribe(move |event| {
+            let _ = tx.send((event.session_id.clone(), (*event.update).clone()));
+        });
+
+        // Spawn background task to receive updates and update task subtitles
+        cx.spawn(async move |cx| {
+            while let Some((session_id, update)) = rx.recv().await {
+                let weak = weak_entity.clone();
+                let _ = cx.update(|cx| {
+                    if let Some(entity) = weak.upgrade() {
+                        entity.update(cx, |this, cx| {
+                            this.handle_session_update(session_id, update, cx);
+                        });
+                    }
+                });
+            }
+        })
+        .detach();
+
+        log::info!("ListTaskPanel subscribed to session bus");
+    }
+
+    /// Handle session updates and update task subtitles
+    fn handle_session_update(
+        &mut self,
+        session_id: String,
+        update: SessionUpdate,
+        cx: &mut Context<Self>,
+    ) {
+        // Extract text from the update
+        let text = match &update {
+            SessionUpdate::UserMessageChunk(chunk) => Self::extract_text_from_content(&chunk.content),
+            SessionUpdate::AgentMessageChunk(chunk) => {
+                Self::extract_text_from_content(&chunk.content)
+            }
+            _ => return, // Ignore other update types
+        };
+
+        if text.is_empty() {
+            return;
+        }
+
+        // Update the task with matching session_id
+        self.task_list.update(cx, |list, cx| {
+            let delegate = list.delegate_mut();
+            let mut found = false;
+
+            // Find and update the task
+            for task in delegate._agent_tasks.iter_mut() {
+                if task.session_id.as_ref() == Some(&session_id) {
+                    let mut updated_task = (**task).clone();
+                    // Truncate text to ~50 characters for subtitle
+                    let preview = if text.len() > 50 {
+                        format!("{}...", &text[..50])
+                    } else {
+                        text.clone()
+                    };
+                    updated_task.update_subtitle(preview);
+                    *task = Rc::new(updated_task);
+                    found = true;
+                    break;
+                }
+            }
+
+            if found {
+                delegate.prepare("");
+                cx.notify();
+                log::debug!("Updated task subtitle for session: {}", session_id);
+            }
+        });
+    }
+
+    /// Extract text from ContentBlock
+    fn extract_text_from_content(content: &ContentBlock) -> String {
+        match content {
+            ContentBlock::Text(text_content) => text_content.text.clone(),
+            _ => String::new(),
+        }
+    }
+
     fn selected_agent_task(
         &mut self,
         _: &SelectedAgentTask,
@@ -463,6 +567,8 @@ impl ListTaskPanel {
             add_new_code_lines: 0,
             delete_code_lines: 0,
             status: TaskStatus::InProgress,
+            session_id: None,
+            subtitle: None,
             change_timestamp: 0,
             change_timestamp_str: "".into(),
             add_new_code_lines_str: "+0".into(),
@@ -477,6 +583,30 @@ impl ListTaskPanel {
             delegate.prepare("");
             cx.notify();
         });
+    }
+
+    /// Handle action to add a new session to the list
+    fn on_add_session_to_list(
+        &mut self,
+        action: &AddSessionToList,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let task_name = action.task_name.clone();
+        let session_id = action.session_id.clone();
+
+        // Create a new task for this session
+        let new_task = AgentTask::new_for_session(task_name, session_id);
+
+        // Add task to the beginning of the list in the "Default" section
+        self.task_list.update(cx, |list, cx| {
+            let delegate = list.delegate_mut();
+            delegate._agent_tasks.insert(0, Rc::new(new_task));
+            delegate.prepare("");
+            cx.notify();
+        });
+
+        log::info!("Added session to list: {}", action.session_id);
     }
 
     /// Handle click on "New Task" button - shows the welcome panel
@@ -513,6 +643,7 @@ impl Render for ListTaskPanel {
             .track_focus(&self.focus_handle)
             .on_action(cx.listener(Self::selected_agent_task))
             .on_action(cx.listener(Self::on_create_task_from_welcome))
+            .on_action(cx.listener(Self::on_add_session_to_list))
             .size_full()
             .gap_4()
             .child(

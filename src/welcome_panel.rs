@@ -13,7 +13,7 @@ use gpui_component::{
     v_flex, ActiveTheme, IndexPath, StyledExt,
 };
 
-use crate::{components::ChatInputBox, workspace::AddSessionPanel, AppState};
+use crate::{components::ChatInputBox, workspace::AddSessionPanel, AddSessionToList, AppState};
 
 /// Delegate for the context list in the chat input popover
 struct ContextListDelegate {
@@ -299,13 +299,23 @@ impl WelcomePanel {
                         .ok();
 
                         // Create and dispatch action to add session panel
-                        let sid_for_action = sid.clone();
+                        let sid_for_panel = sid.clone();
+                        let input_text_for_list = input_text.clone();
+                        let sid_for_list = sid.clone();
                         cx.update(|cx| {
+                            // Add session panel
                             let action = AddSessionPanel {
-                                session_id: sid_for_action,
+                                session_id: sid_for_panel,
                                 placement: DockPlacement::Center,
                             };
                             cx.dispatch_action(&action);
+
+                            // Add session to list panel
+                            let list_action = AddSessionToList {
+                                session_id: sid_for_list,
+                                task_name: input_text_for_list,
+                            };
+                            cx.dispatch_action(&list_action);
                         })
                         .ok();
 

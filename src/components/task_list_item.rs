@@ -95,26 +95,39 @@ impl RenderOnce for TaskListItem {
                                     .whitespace_nowrap()
                                     .child(self.agent_task.name.clone()),
                             )
-                            .child(
-                                // Subtitle with metadata - conditionally shown
-                                h_flex()
-                                    .gap_1()
-                                    .text_size(px(11.))
-                                    .text_color(muted_color)
-                                    .child("2 Files ")
-                                    .child(
-                                        div()
-                                            .text_color(add_color)
-                                            .child(self.agent_task.add_new_code_lines_str.clone()),
-                                    )
-                                    .child(
-                                        div()
-                                            .text_color(delete_color)
-                                            .child(self.agent_task.delete_code_lines_str.clone()),
-                                    )
-                                    .child(" · ")
-                                    .child(self.agent_task.task_type.clone()),
-                            ),
+                            .when_some(self.agent_task.subtitle.clone(), |this, subtitle| {
+                                // Show message preview if available
+                                this.child(
+                                    div()
+                                        .text_size(px(11.))
+                                        .text_color(muted_color)
+                                        .whitespace_nowrap()
+                                        .overflow_x_hidden()
+                                        .child(subtitle),
+                                )
+                            })
+                            .when(self.agent_task.subtitle.is_none(), |this| {
+                                // Fallback to metadata display when no subtitle
+                                this.child(
+                                    h_flex()
+                                        .gap_1()
+                                        .text_size(px(11.))
+                                        .text_color(muted_color)
+                                        .child("2 Files ")
+                                        .child(
+                                            div()
+                                                .text_color(add_color)
+                                                .child(self.agent_task.add_new_code_lines_str.clone()),
+                                        )
+                                        .child(
+                                            div()
+                                                .text_color(delete_color)
+                                                .child(self.agent_task.delete_code_lines_str.clone()),
+                                        )
+                                        .child(" · ")
+                                        .child(self.agent_task.task_type.clone()),
+                                )
+                            }),
                     ),
             )
     }

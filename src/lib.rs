@@ -39,7 +39,7 @@ pub use menu::UIMenu;
 pub use schemas::{conversation_schema, task_schema};
 use serde::Deserialize;
 pub use settings_window::SettingsWindow;
-pub use task_list::ListTaskPanel;
+pub use task_list::{AddSessionToList, ListTaskPanel};
 pub use task_turn_view::CollapsibleEventTurn;
 pub use title_bar::AppTitleBar;
 pub use welcome_panel::WelcomePanel;
