@@ -1,11 +1,9 @@
 use gpui::{
-    div, prelude::FluentBuilder as _, px, App, AppContext, Context, Entity, IntoElement, ParentElement, Render, SharedString, Styled,
-    Window,
+    div, prelude::FluentBuilder as _, px, App, AppContext, Context, Entity, IntoElement,
+    ParentElement, Render, SharedString, Styled, Window,
 };
 
-use agent_client_protocol_schema::{
-    ToolCall, ToolCallContent, ToolCallStatus, ToolKind,
-};
+use agent_client_protocol_schema::{ToolCall, ToolCallContent, ToolCallStatus, ToolKind};
 use gpui_component::{
     button::{Button, ButtonVariants},
     collapsible::Collapsible,

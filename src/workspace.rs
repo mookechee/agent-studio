@@ -2,9 +2,7 @@ use anyhow::{Context as _, Result};
 use gpui::*;
 use gpui_component::{
     button::{Button, ButtonVariants as _},
-    dock::{
-        DockArea, DockAreaState, DockEvent, DockItem, DockPlacement,
-    },
+    dock::{DockArea, DockAreaState, DockEvent, DockItem, DockPlacement},
     menu::DropdownMenu,
     IconName, Root, Sizable,
 };
@@ -399,7 +397,10 @@ impl DockWorkspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        log::info!("Received AddSessionPanel action: session_id={}", action.session_id);
+        log::info!(
+            "Received AddSessionPanel action: session_id={}",
+            action.session_id
+        );
 
         // Create a new ConversationPanelAcp panel container for this specific session
         let panel = Arc::new(DockPanelContainer::panel_for_session(

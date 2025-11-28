@@ -1,6 +1,6 @@
 use gpui::{
-    div, prelude::FluentBuilder as _, px, App, AppContext, Context, ElementId, Entity, IntoElement, ParentElement, Render, RenderOnce, SharedString, Styled,
-    Window,
+    div, prelude::FluentBuilder as _, px, App, AppContext, Context, ElementId, Entity, IntoElement,
+    ParentElement, Render, RenderOnce, SharedString, Styled, Window,
 };
 
 use agent_client_protocol_schema::{

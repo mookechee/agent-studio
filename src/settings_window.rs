@@ -96,10 +96,12 @@ impl SettingsWindow {
     }
 
     fn render_sidebar(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let tabs = [(SettingsTab::General, "General", IconName::Settings),
+        let tabs = [
+            (SettingsTab::General, "General", IconName::Settings),
             (SettingsTab::Appearance, "Appearance", IconName::Palette),
             (SettingsTab::Editor, "Editor", IconName::File),
-            (SettingsTab::Extensions, "Extensions", IconName::Star)];
+            (SettingsTab::Extensions, "Extensions", IconName::Star),
+        ];
 
         v_flex()
             .w(px(200.))

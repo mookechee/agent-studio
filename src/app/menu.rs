@@ -2,8 +2,8 @@ use crate::app::actions::{Copy, Cut, Info, Paste, SearchAll, ToggleCheck};
 use crate::dock_panel::section;
 use crate::dock_panel::DockPanel;
 use gpui::{
-    div, px, App, AppContext, Context, Corner, Entity, InteractiveElement, IntoElement,
-    KeyBinding, ParentElement as _, Render, SharedString, Styled as _, Window,
+    div, px, App, AppContext, Context, Corner, Entity, InteractiveElement, IntoElement, KeyBinding,
+    ParentElement as _, Render, SharedString, Styled as _, Window,
 };
 use gpui_component::{
     button::Button,

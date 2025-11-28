@@ -17,18 +17,13 @@ mod task_turn_view;
 mod welcome_panel;
 pub mod workspace;
 
-use std::sync::Arc;
-
-use crate::{
-    acp_client::{AgentManager, PermissionStore},
-    dock_panel::{DockPanel, DockPanelContainer, DockPanelState},
-    session_bus::SessionUpdateBusContainer,
-};
+use crate::dock_panel::{DockPanel, DockPanelContainer, DockPanelState};
+pub use app::app_state::AppState;
 pub use app::{
     actions::{
         About, AddPanel, AddSessionPanel, AddSessionToList, CloseWindow, CreateTaskFromWelcome,
-        Info, Open, Quit, SelectedAgentTask, SelectFont, SelectLocale, SelectRadius,
-        SelectScrollbarShow, ShowConversationPanel, ShowPanelInfo, ShowWelcomePanel, Tab, TabPrev,
+        Info, Open, Quit, SelectFont, SelectLocale, SelectRadius, SelectScrollbarShow,
+        SelectedAgentTask, ShowConversationPanel, ShowPanelInfo, ShowWelcomePanel, Tab, TabPrev,
         TestAction, ToggleDockToggleButton, TogglePanelVisible, ToggleSearch,
     },
     app_menus, menu, themes, title_bar,
@@ -39,7 +34,7 @@ pub use config::{AgentProcessConfig, Config, Settings};
 pub use conversation::ConversationPanel;
 pub use conversation_acp::ConversationPanelAcp;
 use gpui::{
-    div, px, size, Action, AnyView, App, AppContext, Bounds, Context, Entity, Global, IntoElement,
+    div, px, size, Action, AnyView, App, AppContext, Bounds, Context, Entity, IntoElement,
     KeyBinding, ParentElement, Pixels, Render, SharedString, Size, Styled, Window, WindowBounds,
     WindowKind, WindowOptions,
 };
@@ -66,64 +61,11 @@ pub use agent_client_protocol_schema::{
 
 use gpui_component::{
     dock::{register_panel, PanelControl, PanelInfo},
-    scroll::ScrollbarShow,
     v_flex, Root, TitleBar,
 };
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 const PANEL_NAME: &str = "DockPanelContainer";
-
-pub struct AppState {
-    pub invisible_panels: Entity<Vec<SharedString>>,
-    agent_manager: Option<Arc<AgentManager>>,
-    permission_store: Option<Arc<PermissionStore>>,
-    pub session_bus: SessionUpdateBusContainer,
-}
-
-impl AppState {
-    fn init(cx: &mut App) {
-        let state = Self {
-            invisible_panels: cx.new(|_| Vec::new()),
-            agent_manager: None,
-            permission_store: None,
-            session_bus: SessionUpdateBusContainer::new(),
-        };
-        cx.set_global::<AppState>(state);
-    }
-
-    pub fn global(cx: &App) -> &Self {
-        cx.global::<Self>()
-    }
-
-    pub fn global_mut(cx: &mut App) -> &mut Self {
-        cx.global_mut::<Self>()
-    }
-
-    /// Set the AgentManager after async initialization
-    pub fn set_agent_manager(&mut self, manager: Arc<AgentManager>) {
-        log::info!(
-            "Setting AgentManager with {} agents",
-            manager.list_agents().len()
-        );
-        self.agent_manager = Some(manager);
-    }
-
-    /// Set the PermissionStore
-    pub fn set_permission_store(&mut self, store: Arc<PermissionStore>) {
-        log::info!("Setting PermissionStore");
-        self.permission_store = Some(store);
-    }
-
-    /// Get a reference to the AgentManager if initialized
-    pub fn agent_manager(&self) -> Option<&Arc<AgentManager>> {
-        self.agent_manager.as_ref()
-    }
-
-    /// Get the PermissionStore if set
-    pub fn permission_store(&self) -> Option<&Arc<PermissionStore>> {
-        self.permission_store.as_ref()
-    }
-}
 
 pub fn create_new_window<F, E>(title: &str, crate_view_fn: F, cx: &mut App)
 where
@@ -227,8 +169,6 @@ impl Render for DockRoot {
             .children(notification_layer)
     }
 }
-
-impl Global for AppState {}
 
 pub fn init(cx: &mut App) {
     tracing_subscriber::registry()

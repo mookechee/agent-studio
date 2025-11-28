@@ -14,6 +14,4 @@ pub use task_list_item::TaskListItem;
 
 pub use tool_call_item::{ToolCallItem, ToolCallItemView, ToolCallStatusExt, ToolKindExt};
 
-pub use user_message::{
-    UserMessage, UserMessageData, UserMessageView,
-};
+pub use user_message::{UserMessage, UserMessageData, UserMessageView};

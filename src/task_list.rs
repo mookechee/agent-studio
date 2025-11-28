@@ -481,7 +481,9 @@ impl ListTaskPanel {
     ) {
         // Extract text from the update
         let text = match &update {
-            SessionUpdate::UserMessageChunk(chunk) => Self::extract_text_from_content(&chunk.content),
+            SessionUpdate::UserMessageChunk(chunk) => {
+                Self::extract_text_from_content(&chunk.content)
+            }
             SessionUpdate::AgentMessageChunk(chunk) => {
                 Self::extract_text_from_content(&chunk.content)
             }

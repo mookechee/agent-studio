@@ -127,17 +127,17 @@ pub struct CreateTaskFromWelcome {
 actions!(
     story,
     [
-        About,              // 显示关于对话框
-        Open,               // 打开文件或项目
-        Quit,               // 退出应用
-        CloseWindow,        // 关闭当前窗口
-        ToggleSearch,       // 切换搜索面板
-        TestAction,         // 测试用操作
-        Tab,                // 切换到下一个标签页
-        TabPrev,            // 切换到上一个标签页
-        ShowPanelInfo,      // 显示面板信息
-        ShowWelcomePanel,   // 显示欢迎面板
-        ShowConversationPanel // 显示对话面板
+        About,                 // 显示关于对话框
+        Open,                  // 打开文件或项目
+        Quit,                  // 退出应用
+        CloseWindow,           // 关闭当前窗口
+        ToggleSearch,          // 切换搜索面板
+        TestAction,            // 测试用操作
+        Tab,                   // 切换到下一个标签页
+        TabPrev,               // 切换到上一个标签页
+        ShowPanelInfo,         // 显示面板信息
+        ShowWelcomePanel,      // 显示欢迎面板
+        ShowConversationPanel  // 显示对话面板
     ]
 );
 
@@ -153,13 +153,16 @@ actions!(
 pub struct Info(pub usize);
 
 // 菜单编辑操作 - 包含常见的编辑菜单命令
-actions!(menu_story, [
-    Copy,        // 复制
-    Paste,       // 粘贴
-    Cut,         // 剪切
-    SearchAll,   // 全局搜索
-    ToggleCheck  // 切换勾选状态
-]);
+actions!(
+    menu_story,
+    [
+        Copy,        // 复制
+        Paste,       // 粘贴
+        Cut,         // 剪切
+        SearchAll,   // 全局搜索
+        ToggleCheck  // 切换勾选状态
+    ]
+);
 
 // ============================================================================
 // Theme Actions - 主题相关操作

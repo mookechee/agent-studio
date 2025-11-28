@@ -115,14 +115,14 @@ impl RenderOnce for TaskListItem {
                                         .text_color(muted_color)
                                         .child("2 Files ")
                                         .child(
-                                            div()
-                                                .text_color(add_color)
-                                                .child(self.agent_task.add_new_code_lines_str.clone()),
+                                            div().text_color(add_color).child(
+                                                self.agent_task.add_new_code_lines_str.clone(),
+                                            ),
                                         )
                                         .child(
-                                            div()
-                                                .text_color(delete_color)
-                                                .child(self.agent_task.delete_code_lines_str.clone()),
+                                            div().text_color(delete_color).child(
+                                                self.agent_task.delete_code_lines_str.clone(),
+                                            ),
                                         )
                                         .child(" · ")
                                         .child(self.agent_task.task_type.clone()),

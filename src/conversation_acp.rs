@@ -20,7 +20,6 @@ use crate::{
     dock_panel::DockPanel, AgentMessage, AgentMessageData, AgentTodoList, AppState, UserMessageData,
 };
 
-
 // ============================================================================
 // Helper Traits and Functions
 // ============================================================================
@@ -473,10 +472,16 @@ impl ConversationPanelAcp {
 
     /// Create a new panel for a specific session (no mock data)
     pub fn view_for_session(session_id: String, window: &mut Window, cx: &mut App) -> Entity<Self> {
-        log::info!("🚀 Creating ConversationPanelAcp for session: {}", session_id);
+        log::info!(
+            "🚀 Creating ConversationPanelAcp for session: {}",
+            session_id
+        );
         let entity = cx.new(|cx| Self::new_for_session(session_id.clone(), window, cx));
         Self::subscribe_to_updates(&entity, Some(session_id.clone()), cx);
-        log::info!("✅ ConversationPanelAcp created for session: {}", session_id);
+        log::info!(
+            "✅ ConversationPanelAcp created for session: {}",
+            session_id
+        );
         entity
     }
 
@@ -503,7 +508,10 @@ impl ConversationPanelAcp {
     }
 
     fn new_for_session(session_id: String, _window: &mut Window, cx: &mut App) -> Self {
-        log::info!("🔧 Initializing ConversationPanelAcp for session: {}", session_id);
+        log::info!(
+            "🔧 Initializing ConversationPanelAcp for session: {}",
+            session_id
+        );
         let focus_handle = cx.focus_handle();
 
         Self {
@@ -515,7 +523,11 @@ impl ConversationPanelAcp {
     }
 
     /// Subscribe to session updates after the entity is created
-    pub fn subscribe_to_updates(entity: &Entity<Self>, session_filter: Option<String>, cx: &mut App) {
+    pub fn subscribe_to_updates(
+        entity: &Entity<Self>,
+        session_filter: Option<String>,
+        cx: &mut App,
+    ) {
         let weak_entity = entity.downgrade();
         let session_bus = AppState::global(cx).session_bus.clone();
 
