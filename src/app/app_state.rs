@@ -8,12 +8,21 @@ use crate::{
     permission_bus::PermissionBusContainer,
 };
 
+/// Welcome session info - stores the session created when user selects an agent
+#[derive(Clone, Debug)]
+pub struct WelcomeSession {
+    pub session_id: String,
+    pub agent_name: String,
+}
+
 pub struct AppState {
     pub invisible_panels: Entity<Vec<SharedString>>,
     agent_manager: Option<Arc<AgentManager>>,
     permission_store: Option<Arc<PermissionStore>>,
     pub session_bus: SessionUpdateBusContainer,
     pub permission_bus: PermissionBusContainer,
+    /// Current welcome session - created when user selects an agent
+    welcome_session: Option<WelcomeSession>,
 }
 
 impl AppState {
@@ -24,6 +33,7 @@ impl AppState {
             permission_store: None,
             session_bus: SessionUpdateBusContainer::new(),
             permission_bus: PermissionBusContainer::new(),
+            welcome_session: None,
         };
         cx.set_global::<AppState>(state);
     }
@@ -59,6 +69,27 @@ impl AppState {
     /// Get the PermissionStore if set
     pub fn permission_store(&self) -> Option<&Arc<PermissionStore>> {
         self.permission_store.as_ref()
+    }
+
+    /// Set the welcome session
+    pub fn set_welcome_session(&mut self, session: WelcomeSession) {
+        log::info!(
+            "Setting welcome session: session_id={}, agent={}",
+            session.session_id,
+            session.agent_name
+        );
+        self.welcome_session = Some(session);
+    }
+
+    /// Get the welcome session
+    pub fn welcome_session(&self) -> Option<&WelcomeSession> {
+        self.welcome_session.as_ref()
+    }
+
+    /// Clear the welcome session
+    pub fn clear_welcome_session(&mut self) {
+        log::info!("Clearing welcome session");
+        self.welcome_session = None;
     }
 }
 impl Global for AppState {}

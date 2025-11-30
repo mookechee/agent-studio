@@ -22,7 +22,7 @@ pub mod workspace;
 mod test_mock_data;
 
 use crate::dock_panel::{DockPanel, DockPanelContainer, DockPanelState};
-pub use app::app_state::AppState;
+pub use app::app_state::{AppState, WelcomeSession};
 pub use app::{
     actions::{
         About, AddPanel, AddSessionPanel, AddSessionToList, CloseWindow, CreateTaskFromWelcome,

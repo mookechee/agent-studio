@@ -31,6 +31,7 @@ tokio-util = { version = "0.7.17", features = ["compat"] }
 tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread", "process"] }
 async-trait = "0.1.89"
 rfd = "0.15"
+uuid = { version = "1.11", features = ["v4"] }
 
 [lints]
 workspace = true

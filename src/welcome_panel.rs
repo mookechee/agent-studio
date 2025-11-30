@@ -6,11 +6,12 @@ use gpui::{
 use gpui_component::{
     input::InputState,
     list::{ListDelegate, ListItem, ListState},
-    select::SelectState,
+    select::{SelectEvent, SelectState},
     v_flex, ActiveTheme, IndexPath, StyledExt,
 };
 
-use crate::{components::ChatInputBox, AppState, CreateTaskFromWelcome};
+use crate::{components::ChatInputBox, AppState, CreateTaskFromWelcome, WelcomeSession};
+use agent_client_protocol as acp;
 
 /// Delegate for the context list in the chat input popover
 struct ContextListDelegate {
@@ -135,6 +136,12 @@ impl WelcomePanel {
                 },
             );
             this._subscriptions.push(subscription);
+
+            // Subscribe to agent_select selection changes to create session
+            let agent_select_sub = cx.subscribe_in(&this.agent_select, window, |this, _, _: &SelectEvent<Vec<String>>, window, cx| {
+                this.on_agent_selected(window, cx);
+            });
+            this._subscriptions.push(agent_select_sub);
         });
 
         entity
@@ -219,6 +226,67 @@ impl WelcomePanel {
             state.set_selected_index(Some(IndexPath::default()), window, cx);
         });
         cx.notify();
+    }
+
+    /// Called when agent is selected - creates a new session
+    fn on_agent_selected(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // Skip if no agents available
+        if !self.has_agents {
+            return;
+        }
+
+        let agent_name = self.agent_select
+            .read(cx)
+            .selected_value()
+            .cloned()
+            .unwrap_or_else(|| "test-agent".to_string());
+
+        // Skip placeholder
+        if agent_name == "No agents" {
+            return;
+        }
+
+        // Get agent handle
+        let agent_handle = match AppState::global(cx)
+            .agent_manager()
+            .and_then(|m| m.get(&agent_name))
+        {
+            Some(handle) => handle,
+            None => {
+                log::warn!("Agent not found: {}", agent_name);
+                return;
+            }
+        };
+
+        log::info!("Agent selected: {}, creating session...", agent_name);
+
+        // Create session asynchronously
+        cx.spawn_in(window, async move |_this, window| {
+            let new_session_req = acp::NewSessionRequest {
+                cwd: std::env::current_dir().unwrap_or_default(),
+                mcp_servers: vec![],
+                meta: None,
+            };
+
+            match agent_handle.new_session(new_session_req).await {
+                Ok(resp) => {
+                    let session_id = resp.session_id.to_string();
+                    log::info!("Session created: {} for agent: {}", session_id, agent_name);
+
+                    // Store session in AppState
+                    _ = window.update(move |_, cx| {
+                        AppState::global_mut(cx).set_welcome_session(WelcomeSession {
+                            session_id,
+                            agent_name,
+                        });
+                    });
+                }
+                Err(e) => {
+                    log::error!("Failed to create session for agent {}: {}", agent_name, e);
+                }
+            }
+        })
+        .detach();
     }
 
     /// Handles sending the task based on the current input, mode, and agent selections.

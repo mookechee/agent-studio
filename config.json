@@ -1,5 +1,10 @@
 {
   "agent_servers": {
+    "CLaude Code": {
+      "command": "claude-code-acp",
+      "args": [],
+      "env": {}
+    },
     "Iflow": {
       "command": "iflow",
       "args": ["--experimental-acp"],
