@@ -122,6 +122,18 @@ pub struct CreateTaskFromWelcome {
     /// 任务模式
     pub mode: String,
 }
+/// 显示会话对话面板
+/// 
+#[derive(Action, Clone, PartialEq, Deserialize)]
+#[action(namespace = task_list, no_json)]
+pub struct NewSessionConversationPanel {
+    /// Agent 的会话唯一标识符，保存在 Appstate 中
+    pub session_id: String,
+    /// 使用的 Agent 名称
+    pub agent_name: String,
+    /// 任务模式
+    pub mode: String,
+}
 
 // 通用应用级操作 - 包含各种应用级别的命令和操作
 actions!(

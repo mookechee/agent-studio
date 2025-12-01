@@ -20,14 +20,14 @@ This is the `agentx` Agent Studio application, part of the gpui-component worksp
 ### Application Structure
 
 - **Main Entry**: `src/main.rs` initializes the app, loads config, and spawns the AgentManager
-- **DockWorkspace** (`src/workspace.rs`): The root container managing the dock area, title bar, and layout persistence
+- **DockWorkspace** (`src/workspace/mod.rs`): The root container managing the dock area, title bar, and layout persistence
 - **Panels**: Individual UI components implementing the `DockPanel` trait and wrapped in `DockPanelContainer`
 - **Dock System**: Uses `DockArea` from gpui-component for flexible panel layout
 - **App Module** (`src/app/`): Contains modular application components (actions, menus, themes, title bar)
 
 ### Key Components
 
-1. **DockWorkspace** (`src/workspace.rs`):
+1. **DockWorkspace** (`src/workspace/mod.rs`):
    - Manages the main dock area with version-controlled layout persistence
    - Saves layout state to `target/docks-agentx.json` (debug) or `docks-agentx.json` (release)
    - Handles layout loading, saving (debounced by 10 seconds), and version migration
@@ -69,7 +69,7 @@ This is the `agentx` Agent Studio application, part of the gpui-component worksp
 ### Layout Persistence
 
 The dock layout system uses versioned states:
-- Current version: 5 (defined in `MAIN_DOCK_AREA` in `src/workspace.rs`)
+- Current version: 5 (defined in `MAIN_DOCK_AREA` in `src/workspace/mod.rs`)
 - When version mismatch detected, prompts user to reset to default layout
 - Layout automatically saved 10 seconds after changes (debounced)
 - Layout saved on app quit via `on_app_quit` hook
@@ -177,7 +177,7 @@ To add a new panel type:
 
 2. Add to the match statement in `create_panel_view()` in `src/lib.rs` to handle panel creation
 
-3. Add to default layout in `reset_default_layout()` or `init_default_layout()` in `src/workspace.rs`
+3. Add to default layout in `reset_default_layout()` or `init_default_layout()` in `src/workspace/mod.rs`
 
 Example panel structure:
 ```rust
@@ -377,7 +377,7 @@ This Agent Studio is part of a Cargo workspace at `../../`:
 ### Important Files in agentx
 
 - `src/main.rs`: Application entry, loads config, initializes AgentManager, spawns workspace
-- `src/workspace.rs`: DockWorkspace implementation, layout persistence, panel management, action handlers
+- `src/workspace/mod.rs`: DockWorkspace implementation, layout persistence, panel management, action handlers
 - `src/lib.rs`: Core initialization, panel registration, DockRoot, AppState with session_bus
 - `src/dock_panel.rs`: DockPanel trait, DockPanelContainer, panel factory methods
 - `src/app/`:

@@ -20,7 +20,7 @@ use crate::components::TaskListItem;
 use crate::task_data::{load_mock_tasks, random_status};
 use crate::task_schema::{AgentTask, TaskStatus};
 use crate::utils;
-use crate::{AppState, CreateTaskFromWelcome, ShowConversationPanel, ShowWelcomePanel};
+use crate::{AppState, CreateTaskFromWelcome, NewSessionConversationPanel, ShowConversationPanel, ShowWelcomePanel};
 
 struct TaskListDelegate {
     industries: Vec<SharedString>,
@@ -401,11 +401,25 @@ impl ListTaskPanel {
             |_this, _, ev: &ListEvent, window, cx| match ev {
                 ListEvent::Select(ix) => {
                     println!("List Selected: {:?}", ix);
+                    // Single click - show conversation panel
+                    window.dispatch_action(Box::new(ShowConversationPanel), cx);
                 }
                 ListEvent::Confirm(ix) => {
                     println!("List Confirmed: {:?}", ix);
-                    // Dispatch action to show conversation panel
+                    // Enter key - show conversation panel
                     window.dispatch_action(Box::new(ShowConversationPanel), cx);
+                }
+                ListEvent::DoubleClick(ix) => {
+                    println!("List Double-clicked: {:?}", ix);
+                    // Double click - add a new conversation panel
+                    window.dispatch_action(
+                        Box::new(NewSessionConversationPanel {
+                            session_id: String::new(),
+                            agent_name: String::new(),
+                            mode: String::new(),
+                        }),
+                        cx,
+                    );
                 }
                 ListEvent::Cancel => {
                     println!("List Cancelled");

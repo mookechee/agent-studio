@@ -26,9 +26,10 @@ pub use app::app_state::{AppState, WelcomeSession};
 pub use app::{
     actions::{
         About, AddPanel, AddSessionPanel, AddSessionToList, CloseWindow, CreateTaskFromWelcome,
-        Info, Open, Quit, SelectFont, SelectLocale, SelectRadius, SelectScrollbarShow,
-        SelectedAgentTask, ShowConversationPanel, ShowPanelInfo, ShowWelcomePanel, Tab, TabPrev,
-        TestAction, ToggleDockToggleButton, TogglePanelVisible, ToggleSearch,
+        Info, NewSessionConversationPanel, Open, Quit, SelectFont, SelectLocale, SelectRadius,
+        SelectScrollbarShow, SelectedAgentTask, ShowConversationPanel, ShowPanelInfo,
+        ShowWelcomePanel, Tab, TabPrev, TestAction, ToggleDockToggleButton, TogglePanelVisible,
+        ToggleSearch,
     },
     app_menus, menu, themes, title_bar,
 };

@@ -5,7 +5,7 @@ use agent_client_protocol as acp;
 
 use crate::{
     AddPanel, AppState, ConversationPanelAcp,
-    CreateTaskFromWelcome, ShowConversationPanel, ShowWelcomePanel,
+    CreateTaskFromWelcome, NewSessionConversationPanel, ShowConversationPanel, ShowWelcomePanel,
     ToggleDockToggleButton, TogglePanelVisible, WelcomePanel, dock_panel::DockPanelContainer,
     utils,
 };
@@ -20,8 +20,8 @@ use super::DockWorkspace;
 //   - on_action_create_task_from_welcome - 从欢迎面板创建任务
 
 impl DockWorkspace {
-    /// Helper method to create and show ConversationPanelAcp in the center
-    fn add_conversation_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    /// Helper method to create and add a new ConversationPanelAcp to the center
+    pub fn add_conversation_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let panel = Arc::new(DockPanelContainer::panel::<ConversationPanelAcp>(
                 window, cx,
             ));
@@ -32,15 +32,17 @@ impl DockWorkspace {
         
     }
 
-    /// Helper method to create and show ConversationPanelAcp in the center
+    /// Helper method to show ConversationPanelAcp in the current active tab
+    /// This will add the panel to the current TabPanel instead of replacing the entire center
     fn show_conversation_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let conversation_panel = Arc::new(DockPanelContainer::panel::<ConversationPanelAcp>(window, cx));
         let conversation_panel = DockPanelContainer::panel::<ConversationPanelAcp>(window, cx);
         let conversation_item =
             DockItem::tab(conversation_panel, &self.dock_area.downgrade(), window, cx);
-
-
         self.dock_area.update(cx, |dock_area, cx| {
             dock_area.set_center(conversation_item, window, cx);
+            // Add to current center TabPanel, similar to clicking a file in an editor
+            // dock_area.add_panel(conversation_panel, DockPlacement::Center, None, window, cx);
         });
     }
     /// Handle AddPanel action - randomly add a conversation panel to specified dock area
@@ -148,6 +150,17 @@ impl DockWorkspace {
         cx: &mut Context<Self>,
     ) {
         self.show_conversation_panel(window, cx);
+    }
+
+    /// Handle NewSessionConversationPanel action - add a new conversation panel
+    pub(super) fn on_action_new_session_conversation_panel(
+        &mut self,
+        _action: &NewSessionConversationPanel,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        log::info!("Adding new session conversation panel");
+        self.add_conversation_panel(window, cx);
     }
 
     /// Handle CreateTaskFromWelcome action - create a new agent task from welcome panel
