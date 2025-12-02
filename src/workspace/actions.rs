@@ -216,13 +216,13 @@ impl DockWorkspace {
                 ws.session_id
             } else {
                 // No welcome session, create new one
-                match agent_service.get_or_create_session(&agent_name).await {
+                match agent_service.create_session(&agent_name).await {
                     Ok(session_id) => {
                         log::info!("Created new session {} for agent {}", session_id, agent_name);
                         session_id
                     }
                     Err(e) => {
-                        log::error!("Failed to get/create session: {}", e);
+                        log::error!("Failed to create session: {}", e);
                         return;
                     }
                 }

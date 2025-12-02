@@ -97,6 +97,8 @@ pub struct ChatInputPanel {
     context_popover_open: bool,
     mode_select: Entity<SelectState<Vec<&'static str>>>,
     agent_select: Entity<SelectState<Vec<String>>>,
+    session_select: Entity<SelectState<Vec<String>>>,
+    current_session_id: Option<String>,
     has_agents: bool,
     _subscriptions: Vec<Subscription>,
 }
@@ -182,6 +184,16 @@ impl ChatInputPanel {
 
         let agent_select = cx.new(|cx| SelectState::new(agent_list, default_agent, window, cx));
 
+        // Initialize session selector (initially empty)
+        let session_select = cx.new(|cx| {
+            SelectState::new(
+                vec!["No sessions".to_string()],
+                None,
+                window,
+                cx,
+            )
+        });
+
         Self {
             focus_handle: cx.focus_handle(),
             input_state,
@@ -189,6 +201,8 @@ impl ChatInputPanel {
             context_popover_open: false,
             mode_select,
             agent_select,
+            session_select,
+            current_session_id: None,
             has_agents,
             _subscriptions: Vec::new(),
         }
@@ -216,6 +230,81 @@ impl ChatInputPanel {
             state.set_selected_index(Some(IndexPath::default()), window, cx);
         });
         cx.notify();
+    }
+
+    /// Refresh sessions for the currently selected agent
+    fn refresh_sessions_for_agent(&mut self, agent_name: &str, window: &mut Window, cx: &mut Context<Self>) {
+        let agent_service = match AppState::global(cx).agent_service() {
+            Some(service) => service.clone(),
+            None => return,
+        };
+
+        let sessions = agent_service.list_sessions_for_agent(agent_name);
+
+        if sessions.is_empty() {
+            // No sessions for this agent
+            self.session_select.update(cx, |state, cx| {
+                state.set_items(vec!["No sessions".to_string()], window, cx);
+                state.set_selected_index(None, window, cx);
+            });
+            self.current_session_id = None;
+        } else {
+            // Display sessions (show first 8 chars of session ID)
+            let session_display: Vec<String> = sessions
+                .iter()
+                .map(|s| {
+                    let short_id = if s.session_id.len() > 8 {
+                        &s.session_id[..8]
+                    } else {
+                        &s.session_id
+                    };
+                    format!("Session {}", short_id)
+                })
+                .collect();
+
+            self.session_select.update(cx, |state, cx| {
+                state.set_items(session_display, window, cx);
+                state.set_selected_index(Some(IndexPath::default()), window, cx);
+            });
+
+            // Set current session to the first one
+            self.current_session_id = sessions.first().map(|s| s.session_id.clone());
+        }
+
+        cx.notify();
+    }
+
+    /// Create a new session for the currently selected agent
+    fn create_new_session(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let agent_name = match self.agent_select.read(cx).selected_value().cloned() {
+            Some(name) if name != "No agents" => name,
+            _ => return,
+        };
+
+        let agent_service = match AppState::global(cx).agent_service() {
+            Some(service) => service.clone(),
+            None => return,
+        };
+
+        let weak_self = cx.entity().downgrade();
+        cx.spawn_in(window, async move |_this, window| {
+            match agent_service.create_session(&agent_name).await {
+                Ok(session_id) => {
+                    log::info!("[ChatInputPanel] Created new session: {}", session_id);
+                    _ = window.update(|window, cx| {
+                        if let Some(this) = weak_self.upgrade() {
+                            this.update(cx, |this, cx| {
+                                this.current_session_id = Some(session_id.clone());
+                                this.refresh_sessions_for_agent(&agent_name, window, cx);
+                            });
+                        }
+                    });
+                }
+                Err(e) => {
+                    log::error!("[ChatInputPanel] Failed to create session: {}", e);
+                }
+            }
+        }).detach();
     }
 
     /// Send message to the selected agent using MessageService
@@ -248,27 +337,73 @@ impl ChatInputPanel {
             }
         };
 
+        // Get AgentService
+        let agent_service = match AppState::global(cx).agent_service() {
+            Some(service) => service.clone(),
+            None => {
+                log::error!("[ChatInputPanel] AgentService not initialized");
+                return;
+            }
+        };
+
         // Clear the input immediately
         self.input_state.update(cx, |state, cx| {
             state.set_value("", window, cx);
         });
 
-        // Spawn async task to send the message using MessageService
+        // Check if we have a current session
+        let session_id = if let Some(sid) = &self.current_session_id {
+            sid.clone()
+        } else {
+            // No session selected, create new one and send message after creation
+            log::info!("[ChatInputPanel] No session selected, creating new session");
+            let weak_self = cx.entity().downgrade();
+            let agent_name_for_spawn = agent_name.clone();
+
+            cx.spawn_in(window, async move |_this, window| {
+                match agent_service.create_session(&agent_name_for_spawn).await {
+                    Ok(new_session_id) => {
+                        log::info!("[ChatInputPanel] Created session {} for agent {}", new_session_id, agent_name_for_spawn);
+
+                        // Update UI with new session
+                        _ = window.update(|window, cx| {
+                            if let Some(this) = weak_self.upgrade() {
+                                this.update(cx, |this, cx| {
+                                    this.current_session_id = Some(new_session_id.clone());
+                                    this.refresh_sessions_for_agent(&agent_name_for_spawn, window, cx);
+                                });
+                            }
+                        });
+
+                        // Send the message to the new session
+                        match message_service.send_message_to_session(&agent_name_for_spawn, &new_session_id, input_text).await {
+                            Ok(_) => {
+                                log::info!("[ChatInputPanel] Message sent successfully to new session {}", new_session_id);
+                            }
+                            Err(e) => {
+                                log::error!("[ChatInputPanel] Failed to send message: {}", e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("[ChatInputPanel] Failed to create session: {}", e);
+                    }
+                }
+            }).detach();
+            return;
+        };
+
+        // We have a session, send message directly
         cx.spawn(async move |_this, _cx| {
-            // MessageService handles:
-            // 1. Get or create session
-            // 2. Publish user message to event bus (immediate UI feedback)
-            // 3. Send prompt to agent
-            match message_service.send_user_message(&agent_name, input_text).await {
-                Ok(session_id) => {
+            match message_service.send_message_to_session(&agent_name, &session_id, input_text).await {
+                Ok(_) => {
                     log::info!("[ChatInputPanel] Message sent successfully to session {}", session_id);
                 }
                 Err(e) => {
                     log::error!("[ChatInputPanel] Failed to send message: {}", e);
                 }
             }
-        })
-        .detach();
+        }).detach();
     }
 }
 
@@ -297,7 +432,11 @@ impl Render for ChatInputPanel {
                         this.send_message(window, cx);
                     }))
                     .mode_select(self.mode_select.clone())
-                    .agent_select(self.agent_select.clone()),
+                    .agent_select(self.agent_select.clone())
+                    .session_select(self.session_select.clone())
+                    .on_new_session(cx.listener(|this, _, window, cx| {
+                        this.create_new_session(window, cx);
+                    })),
             )
     }
 }

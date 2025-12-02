@@ -33,6 +33,8 @@ pub struct ChatInputBox {
     on_context_popover_change: Option<Box<dyn Fn(&bool, &mut Window, &mut App) + 'static>>,
     mode_select: Option<Entity<SelectState<Vec<&'static str>>>>,
     agent_select: Option<Entity<SelectState<Vec<String>>>>,
+    session_select: Option<Entity<SelectState<Vec<String>>>>,
+    on_new_session: Option<Box<dyn Fn(&gpui::ClickEvent, &mut Window, &mut App) + 'static>>,
 }
 
 impl ChatInputBox {
@@ -49,6 +51,8 @@ impl ChatInputBox {
             on_context_popover_change: None,
             mode_select: None,
             agent_select: None,
+            session_select: None,
+            on_new_session: None,
         }
     }
 
@@ -104,12 +108,28 @@ impl ChatInputBox {
         self.agent_select = Some(select);
         self
     }
+
+    /// Set the session select state
+    pub fn session_select(mut self, select: Entity<SelectState<Vec<String>>>) -> Self {
+        self.session_select = Some(select);
+        self
+    }
+
+    /// Set a callback for when the new session button is clicked
+    pub fn on_new_session<F>(mut self, callback: F) -> Self
+    where
+        F: Fn(&gpui::ClickEvent, &mut Window, &mut App) + 'static,
+    {
+        self.on_new_session = Some(Box::new(callback));
+        self
+    }
 }
 
 impl RenderOnce for ChatInputBox {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme();
         let on_send = self.on_send;
+        let on_new_session = self.on_new_session;
         let input_value = self.input_state.read(cx).value();
         let is_empty = input_value.trim().is_empty();
 
@@ -196,6 +216,20 @@ impl RenderOnce for ChatInputBox {
                                     .when_some(self.agent_select.clone(), |this, agent_select| {
                                         this.child(
                                             Select::new(&agent_select).small().appearance(false),
+                                        )
+                                    })
+                                    .when_some(self.session_select.clone(), |this, session_select| {
+                                        this.child(
+                                            Select::new(&session_select).small().appearance(false),
+                                        )
+                                    })
+                                    .when_some(on_new_session, |this, on_new_session_callback| {
+                                        this.child(
+                                            Button::new("new-session")
+                                                .icon(Icon::new(IconName::Plus))
+                                                .ghost()
+                                                .small()
+                                                .on_click(on_new_session_callback),
                                         )
                                     })
                                     .when_some(self.mode_select, |this, mode_select| {

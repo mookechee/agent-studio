@@ -30,43 +30,12 @@ impl MessageService {
         }
     }
 
-    /// Send a user message (complete flow)
-    ///
-    /// This method performs the following steps:
-    /// 1. Get or create a session for the agent
-    /// 2. Publish the user message to the event bus (immediate UI feedback)
-    /// 3. Send the prompt to the agent
-    ///
-    /// Returns the session ID on success.
-    pub async fn send_user_message(
-        &self,
-        agent_name: &str,
-        message: String,
-    ) -> Result<String> {
-        // 1. Get or create session
-        let session_id = self
-            .agent_service
-            .get_or_create_session(agent_name)
-            .await
-            .map_err(|e| anyhow!("Agent error: {}", e))?;
-
-        // 2. Publish user message to event bus (immediate UI feedback)
-        self.publish_user_message(&session_id, &message);
-
-        // 3. Send prompt to agent
-        self.agent_service
-            .send_prompt(agent_name, &session_id, vec![message])
-            .await
-            .map_err(|e| anyhow!("Failed to send message: {}", e))?;
-
-        Ok(session_id)
-    }
-
     /// Send a user message to an existing session
     ///
     /// This method performs the following steps:
-    /// 1. Publish the user message to the event bus (immediate UI feedback)
-    /// 2. Send the prompt to the agent
+    /// 1. Verify the session exists
+    /// 2. Publish the user message to the event bus (immediate UI feedback)
+    /// 3. Send the prompt to the agent
     ///
     /// Use this when you already have a session ID and want to ensure
     /// the UI panel has subscribed before the message is sent.
@@ -76,10 +45,15 @@ impl MessageService {
         session_id: &str,
         message: String,
     ) -> Result<()> {
-        // 1. Publish user message to event bus (immediate UI feedback)
+        // 1. Verify session exists
+        if self.agent_service.get_session_info(agent_name, session_id).is_none() {
+            return Err(anyhow!("Session not found: {}", session_id));
+        }
+
+        // 2. Publish user message to event bus (immediate UI feedback)
         self.publish_user_message(session_id, &message);
 
-        // 2. Send prompt to agent
+        // 3. Send prompt to agent
         self.agent_service
             .send_prompt(agent_name, session_id, vec![message])
             .await
