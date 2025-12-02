@@ -20,7 +20,8 @@
       "Bash(tree:*)",
       "Bash(find:*)",
       "Bash(mkdir:*)",
-      "Bash(cargo clippy:*)"
+      "Bash(cargo clippy:*)",
+      "Bash(timeout 10 cargo run:*)"
     ],
     "deny": [],
     "ask": []

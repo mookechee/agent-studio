@@ -6,11 +6,11 @@ use gpui::{
 use gpui_component::{
     input::InputState,
     list::{ListDelegate, ListItem, ListState},
-    select::SelectState,
+    select::{SelectEvent, SelectState},
     v_flex, ActiveTheme, IndexPath, StyledExt,
 };
 
-use crate::{components::ChatInputBox, AppState, CreateTaskFromWelcome};
+use crate::{components::ChatInputBox, AppState, CreateTaskFromWelcome, WelcomeSession};
 
 /// Delegate for the context list in the chat input popover
 struct ContextListDelegate {
@@ -146,6 +146,16 @@ impl WelcomePanel {
                 },
             );
             this._subscriptions.push(subscription);
+
+            // Subscribe to session_select changes to update welcome_session
+            let session_select_sub = cx.subscribe_in(
+                &this.session_select,
+                window,
+                |this, _, _: &SelectEvent<Vec<String>>, _window, cx| {
+                    this.on_session_changed(cx);
+                },
+            );
+            this._subscriptions.push(session_select_sub);
         });
 
         entity
@@ -266,6 +276,7 @@ impl WelcomePanel {
                     state.set_selected_index(None, window, cx);
                 });
                 self.current_session_id = None;
+                AppState::global_mut(cx).clear_welcome_session();
                 cx.notify();
                 return;
             }
@@ -273,6 +284,45 @@ impl WelcomePanel {
 
         // Refresh sessions for the newly selected agent
         self.refresh_sessions_for_agent(&agent_name, window, cx);
+    }
+
+    /// Handle session selection change - update welcome_session
+    fn on_session_changed(&mut self, cx: &mut Context<Self>) {
+        let agent_name = match self.agent_select.read(cx).selected_value().cloned() {
+            Some(name) if name != "No agents" => name,
+            _ => return,
+        };
+
+        let agent_service = match AppState::global(cx).agent_service() {
+            Some(service) => service.clone(),
+            None => return,
+        };
+
+        // Get the selected session index
+        let selected_index = match self.session_select.read(cx).selected_index(cx) {
+            Some(idx) => idx.row,
+            None => return,
+        };
+
+        // Get all sessions for this agent
+        let sessions = agent_service.list_sessions_for_agent(&agent_name);
+
+        // Get the selected session
+        if let Some(selected_session) = sessions.get(selected_index) {
+            self.current_session_id = Some(selected_session.session_id.clone());
+
+            // Update welcome session
+            AppState::global_mut(cx).set_welcome_session(WelcomeSession {
+                session_id: selected_session.session_id.clone(),
+                agent_name: agent_name.clone(),
+            });
+
+            log::info!(
+                "[WelcomePanel] Session changed to: {} for agent: {}",
+                selected_session.session_id,
+                agent_name
+            );
+        }
     }
 
     /// Refresh sessions for the currently selected agent
@@ -291,6 +341,9 @@ impl WelcomePanel {
                 state.set_selected_index(None, window, cx);
             });
             self.current_session_id = None;
+
+            // Clear welcome session when no sessions available
+            AppState::global_mut(cx).clear_welcome_session();
         } else {
             // Display sessions (show first 8 chars of session ID)
             let session_display: Vec<String> = sessions
@@ -311,7 +364,15 @@ impl WelcomePanel {
             });
 
             // Set current session to the first one
-            self.current_session_id = sessions.first().map(|s| s.session_id.clone());
+            if let Some(first_session) = sessions.first() {
+                self.current_session_id = Some(first_session.session_id.clone());
+
+                // Store as welcome session for CreateTaskFromWelcome action
+                AppState::global_mut(cx).set_welcome_session(WelcomeSession {
+                    session_id: first_session.session_id.clone(),
+                    agent_name: agent_name.to_string(),
+                });
+            }
         }
 
         cx.notify();
@@ -330,15 +391,23 @@ impl WelcomePanel {
         };
 
         let weak_self = cx.entity().downgrade();
+        let agent_name_for_session = agent_name.clone();
         cx.spawn_in(window, async move |_this, window| {
             match agent_service.create_session(&agent_name).await {
                 Ok(session_id) => {
                     log::info!("[WelcomePanel] Created new session: {}", session_id);
                     _ = window.update(|window, cx| {
+                        // Store as welcome session immediately
+                        AppState::global_mut(cx).set_welcome_session(WelcomeSession {
+                            session_id: session_id.clone(),
+                            agent_name: agent_name_for_session.clone(),
+                        });
+
+                        // Update UI
                         if let Some(this) = weak_self.upgrade() {
                             this.update(cx, |this, cx| {
                                 this.current_session_id = Some(session_id.clone());
-                                this.refresh_sessions_for_agent(&agent_name, window, cx);
+                                this.refresh_sessions_for_agent(&agent_name_for_session, window, cx);
                             });
                         }
                     });
