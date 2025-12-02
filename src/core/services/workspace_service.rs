@@ -1,31 +1,48 @@
+use anyhow::{Context, Result};
 use std::path::PathBuf;
 use std::sync::Arc;
-use anyhow::{Context, Result};
 use tokio::sync::RwLock;
 
-use crate::schemas::workspace_schema::{Workspace, WorkspaceConfig, WorkspaceTask, TaskStatus};
+use crate::core::event_bus::{WorkspaceUpdateBusContainer, WorkspaceUpdateEvent};
+use crate::schemas::workspace_schema::{TaskStatus, Workspace, WorkspaceConfig, WorkspaceTask};
 
 /// Service for managing workspaces and tasks
-/// 
+///
 /// This service provides the business logic for:
 /// - Adding/removing workspaces (project folders)
 /// - Creating tasks within workspaces
 /// - Managing task-session associations
 /// - Persisting workspace configuration
+/// - Publishing workspace update events
 #[derive(Clone)]
 pub struct WorkspaceService {
     config: Arc<RwLock<WorkspaceConfig>>,
     config_path: PathBuf,
+    workspace_bus: Option<WorkspaceUpdateBusContainer>,
 }
 
 impl WorkspaceService {
     /// Create a new WorkspaceService
     pub fn new(config_path: PathBuf) -> Self {
         let config = Self::load_config(&config_path).unwrap_or_default();
-        
+
         Self {
             config: Arc::new(RwLock::new(config)),
             config_path,
+            workspace_bus: None,
+        }
+    }
+
+    /// Set the workspace event bus (called after AppState initialization)
+    pub fn set_workspace_bus(&mut self, bus: WorkspaceUpdateBusContainer) {
+        self.workspace_bus = Some(bus);
+    }
+
+    /// Publish a workspace update event if bus is available
+    fn publish_event(&self, event: WorkspaceUpdateEvent) {
+        if let Some(bus) = &self.workspace_bus {
+            log::debug!("[WorkspaceService] Publishing event: {:?}", &event);
+            bus.lock().unwrap().publish(event);
         }
     }
 
@@ -35,12 +52,11 @@ impl WorkspaceService {
             return Ok(WorkspaceConfig::default());
         }
 
-        let content = std::fs::read_to_string(path)
-            .context("Failed to read workspace config")?;
-        
-        let config: WorkspaceConfig = serde_json::from_str(&content)
-            .context("Failed to parse workspace config")?;
-        
+        let content = std::fs::read_to_string(path).context("Failed to read workspace config")?;
+
+        let config: WorkspaceConfig =
+            serde_json::from_str(&content).context("Failed to parse workspace config")?;
+
         Ok(config)
     }
 
@@ -49,10 +65,9 @@ impl WorkspaceService {
         let config = self.config.read().await;
         let content = serde_json::to_string_pretty(&*config)
             .context("Failed to serialize workspace config")?;
-        
-        std::fs::write(&self.config_path, content)
-            .context("Failed to write workspace config")?;
-        
+
+        std::fs::write(&self.config_path, content).context("Failed to write workspace config")?;
+
         Ok(())
     }
 
@@ -87,8 +102,17 @@ impl WorkspaceService {
         }
 
         self.save_config().await?;
-        
-        log::info!("Added workspace: {} at {:?}", workspace_clone.name, workspace_clone.path);
+
+        // Publish WorkspaceAdded event
+        self.publish_event(WorkspaceUpdateEvent::WorkspaceAdded {
+            workspace_id: workspace_clone.id.clone(),
+        });
+
+        log::info!(
+            "Added workspace: {} at {:?}",
+            workspace_clone.name,
+            workspace_clone.path
+        );
         Ok(workspace_clone)
     }
 
@@ -97,7 +121,7 @@ impl WorkspaceService {
         {
             let mut config = self.config.write().await;
             config.remove_workspace(workspace_id);
-            
+
             // Clear active workspace if it was removed
             if config.active_workspace_id.as_ref() == Some(&workspace_id.to_string()) {
                 config.active_workspace_id = config.workspaces.first().map(|w| w.id.clone());
@@ -105,7 +129,7 @@ impl WorkspaceService {
         }
 
         self.save_config().await?;
-        
+
         log::info!("Removed workspace: {}", workspace_id);
         Ok(())
     }
@@ -127,14 +151,14 @@ impl WorkspaceService {
     pub async fn set_active_workspace(&self, workspace_id: &str) -> Result<()> {
         {
             let mut config = self.config.write().await;
-            
+
             // Verify workspace exists
             if config.get_workspace(workspace_id).is_none() {
                 anyhow::bail!("Workspace not found: {}", workspace_id);
             }
-            
+
             config.active_workspace_id = Some(workspace_id.to_string());
-            
+
             // Update last accessed time
             if let Some(workspace) = config.get_workspace_mut(workspace_id) {
                 workspace.touch();
@@ -142,7 +166,7 @@ impl WorkspaceService {
         }
 
         self.save_config().await?;
-        
+
         log::info!("Set active workspace: {}", workspace_id);
         Ok(())
     }
@@ -155,28 +179,33 @@ impl WorkspaceService {
         agent_name: String,
         mode: String,
     ) -> Result<WorkspaceTask> {
-        let task = WorkspaceTask::new(
-            workspace_id.to_string(),
-            name,
-            agent_name,
-            mode,
-        );
+        let task = WorkspaceTask::new(workspace_id.to_string(), name, agent_name, mode);
         let task_clone = task.clone();
 
         {
             let mut config = self.config.write().await;
-            
+
             // Verify workspace exists
             if config.get_workspace(workspace_id).is_none() {
                 anyhow::bail!("Workspace not found: {}", workspace_id);
             }
-            
+
             config.add_task(task);
         }
 
         self.save_config().await?;
-        
-        log::info!("Created task '{}' in workspace {}", task_clone.name, workspace_id);
+
+        // Publish TaskCreated event
+        self.publish_event(WorkspaceUpdateEvent::TaskCreated {
+            workspace_id: workspace_id.to_string(),
+            task_id: task_clone.id.clone(),
+        });
+
+        log::info!(
+            "Created task '{}' in workspace {}",
+            task_clone.name,
+            workspace_id
+        );
         Ok(task_clone)
     }
 
@@ -184,23 +213,26 @@ impl WorkspaceService {
     pub async fn set_task_session(&self, task_id: &str, session_id: String) -> Result<()> {
         {
             let mut config = self.config.write().await;
-            
-            let task = config.tasks.iter_mut()
+
+            let task = config
+                .tasks
+                .iter_mut()
                 .find(|t| t.id == task_id)
                 .context("Task not found")?;
-            
+
             task.set_session(session_id);
         }
 
         self.save_config().await?;
-        
+
         Ok(())
     }
 
     /// Get all tasks for a workspace
     pub async fn get_workspace_tasks(&self, workspace_id: &str) -> Vec<WorkspaceTask> {
         let config = self.config.read().await;
-        config.tasks_for_workspace(workspace_id)
+        config
+            .tasks_for_workspace(workspace_id)
             .into_iter()
             .cloned()
             .collect()
@@ -210,16 +242,18 @@ impl WorkspaceService {
     pub async fn update_task_status(&self, task_id: &str, status: TaskStatus) -> Result<()> {
         {
             let mut config = self.config.write().await;
-            
-            let task = config.tasks.iter_mut()
+
+            let task = config
+                .tasks
+                .iter_mut()
                 .find(|t| t.id == task_id)
                 .context("Task not found")?;
-            
+
             task.status = status;
         }
 
         self.save_config().await?;
-        
+
         Ok(())
     }
 
@@ -227,7 +261,7 @@ impl WorkspaceService {
     pub async fn update_task_message(&self, session_id: &str, message: String) -> Result<()> {
         {
             let mut config = self.config.write().await;
-            
+
             if let Some(task) = config.find_task_by_session(session_id) {
                 task.update_last_message(message);
             }
@@ -235,14 +269,16 @@ impl WorkspaceService {
 
         // Note: We don't save config for message updates to avoid excessive I/O
         // Messages are transient and will be lost on restart
-        
+
         Ok(())
     }
 
     /// Get a task by its session ID
     pub async fn get_task_by_session(&self, session_id: &str) -> Option<WorkspaceTask> {
         let config = self.config.read().await;
-        config.tasks.iter()
+        config
+            .tasks
+            .iter()
             .find(|t| t.session_id.as_ref() == Some(&session_id.to_string()))
             .cloned()
     }

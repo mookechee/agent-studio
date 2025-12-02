@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use gpui::SharedString;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 /// Workspace represents a local project folder
@@ -30,9 +30,9 @@ impl Workspace {
             .and_then(|n| n.to_str())
             .unwrap_or("Unnamed Project")
             .to_string();
-        
+
         let now = chrono::Utc::now();
-        
+
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             name,
@@ -76,12 +76,7 @@ pub struct WorkspaceTask {
 
 impl WorkspaceTask {
     /// Create a new task for a workspace
-    pub fn new(
-        workspace_id: String,
-        name: String,
-        agent_name: String,
-        mode: String,
-    ) -> Self {
+    pub fn new(workspace_id: String, name: String, agent_name: String, mode: String) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             workspace_id,
@@ -108,9 +103,10 @@ impl WorkspaceTask {
 }
 
 /// Task status enumeration
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 pub enum TaskStatus {
     /// Task is pending (no session created yet)
+    #[default]
     Pending,
     /// Task is in progress (session active)
     InProgress,
@@ -118,12 +114,6 @@ pub enum TaskStatus {
     Completed,
     /// Task failed
     Failed,
-}
-
-impl Default for TaskStatus {
-    fn default() -> Self {
-        TaskStatus::Pending
-    }
 }
 
 /// Persistent workspace configuration

@@ -29,7 +29,11 @@ impl ListDelegate for Delegate {
         if self.is_section_collapsed(section) {
             0
         } else {
-            let task_count = self.workspace_tasks.get(section).map(|tasks| tasks.len()).unwrap_or(0);
+            let task_count = self
+                .workspace_tasks
+                .get(section)
+                .map(|tasks| tasks.len())
+                .unwrap_or(0);
             // Always show at least 1 item (placeholder if no tasks)
             task_count.max(1)
         }
@@ -67,7 +71,10 @@ impl ListDelegate for Delegate {
         cx: &mut App,
     ) -> Option<impl IntoElement> {
         let Some(workspace) = self.workspaces.get(section) else {
-            log::warn!("[TaskListDelegate] render_section_header: workspace {} not found", section);
+            log::warn!(
+                "[TaskListDelegate] render_section_header: workspace {} not found",
+                section
+            );
             return None;
         };
 
@@ -158,11 +165,12 @@ impl ListDelegate for Delegate {
         )
     }
 
-    fn render_item(&self, ix: IndexPath, _: &mut Window, cx: &mut App) -> Option<Self::Item> {
+    fn render_item(&self, ix: IndexPath, _: &mut Window, _cx: &mut App) -> Option<Self::Item> {
         let selected = Some(ix) == self.selected_index || Some(ix) == self.confirmed_index;
 
         // Check if this workspace has tasks
-        let has_tasks = self.workspace_tasks
+        let has_tasks = self
+            .workspace_tasks
             .get(ix.section)
             .map(|tasks| !tasks.is_empty())
             .unwrap_or(false);
@@ -172,7 +180,8 @@ impl ListDelegate for Delegate {
             return Some(WorkspaceTaskItem::placeholder(ix, selected));
         }
 
-        let task = self.workspace_tasks
+        let task = self
+            .workspace_tasks
             .get(ix.section)
             .and_then(|tasks| tasks.get(ix.row))?;
 

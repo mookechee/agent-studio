@@ -198,7 +198,7 @@ impl Focusable for SessionManagerPanel {
 }
 
 impl Render for SessionManagerPanel {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme();
 
         v_flex()

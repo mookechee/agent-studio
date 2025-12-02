@@ -41,9 +41,9 @@ pub use app::{
     app_menus, menu, themes, title_bar,
 };
 use gpui::{
-    div, px, size, Action, AnyView, App, AppContext, Bounds, Context, Entity, IntoElement,
-    KeyBinding, ParentElement, Pixels, Render, SharedString, Size, Styled, Window, WindowBounds,
-    WindowKind, WindowOptions,
+    div, px, size, AnyView, App, AppContext, Bounds, Context, Entity, IntoElement, KeyBinding,
+    ParentElement, Pixels, Render, SharedString, Size, Styled, Window, WindowBounds, WindowKind,
+    WindowOptions,
 };
 // Re-export from other modules
 pub use menu::UIMenu;

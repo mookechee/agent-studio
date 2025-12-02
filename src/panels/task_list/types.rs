@@ -113,7 +113,8 @@ impl TaskListDelegate {
     /// Add a task to a workspace
     pub fn add_task(&mut self, task: WorkspaceTask) {
         // Find the workspace index
-        if let Some(workspace_idx) = self.workspaces
+        if let Some(workspace_idx) = self
+            .workspaces
             .iter()
             .position(|w| w.id == task.workspace_id)
         {

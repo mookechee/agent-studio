@@ -52,11 +52,11 @@ impl ListTaskPanel {
         // Subscribe to session bus for all session updates
         Self::subscribe_to_session_updates(&entity, cx);
 
+        // Subscribe to workspace bus for workspace updates
+        Self::subscribe_to_workspace_updates(&entity, cx);
+
         // Load initial workspace data
         Self::load_workspace_data(&entity, cx);
-
-        // Start periodic refresh (every 2 seconds) to pick up new tasks
-        Self::start_periodic_refresh(&entity, cx);
 
         entity
     }
@@ -117,7 +117,11 @@ impl ListTaskPanel {
             let workspaces = workspace_service.list_workspaces().await;
             let all_tasks = workspace_service.get_all_tasks().await;
 
-            log::info!("Loaded {} workspaces and {} tasks", workspaces.len(), all_tasks.len());
+            log::info!(
+                "Loaded {} workspaces and {} tasks",
+                workspaces.len(),
+                all_tasks.len()
+            );
 
             // Update the UI
             _ = cx.update(|cx| {
@@ -263,7 +267,7 @@ impl ListTaskPanel {
         &mut self,
         action: &AddSessionToList,
         _: &mut Window,
-        cx: &mut Context<Self>,
+        _cx: &mut Context<Self>,
     ) {
         log::info!(
             "Received AddSessionToList action: session_id={}, task_name={}",
@@ -288,24 +292,39 @@ impl ListTaskPanel {
         window.dispatch_action(Box::new(ShowWelcomePanel), cx);
     }
 
-    /// Start periodic refresh to pick up new tasks
-    /// Polls every 2 seconds to reload workspace data
-    fn start_periodic_refresh(entity: &Entity<Self>, cx: &mut App) {
+    /// Subscribe to workspace bus for workspace updates (task created, workspace added, etc.)
+    fn subscribe_to_workspace_updates(entity: &Entity<Self>, cx: &mut App) {
         let weak_entity = entity.downgrade();
+        let workspace_bus = AppState::global(cx).workspace_bus.clone();
+
+        // Create channel for cross-thread communication
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
+        // Subscribe to workspace updates
+        workspace_bus.lock().unwrap().subscribe(move |event| {
+            let _ = tx.send(event.clone());
+        });
+
+        // Spawn background task to receive updates and reload data
         cx.spawn(async move |cx| {
-            loop {
-                // Wait 2 seconds between refreshes
-                smol::Timer::after(std::time::Duration::from_secs(2)).await;
+            while let Some(event) = rx.recv().await {
+                log::info!("[ListTaskPanel] Received workspace update: {:?}", event);
+
+                // Small delay to ensure data is written to disk
+                smol::Timer::after(std::time::Duration::from_millis(100)).await;
 
                 // Reload workspace data
-                _ = cx.update(|cx| {
-                    if let Some(entity) = weak_entity.upgrade() {
+                let weak = weak_entity.clone();
+                let _ = cx.update(|cx| {
+                    if let Some(entity) = weak.upgrade() {
                         Self::load_workspace_data(&entity, cx);
                     }
                 });
             }
         })
         .detach();
+
+        log::info!("[ListTaskPanel] Subscribed to workspace bus");
     }
 
     /// Handle "Open project" click - add a workspace
@@ -338,7 +357,7 @@ impl ListTaskPanel {
                             log::info!("Added workspace: {}", workspace.name);
 
                             // Reload workspace data
-                            _ = _window.update(|window, cx| {
+                            _ = _window.update(|_window, cx| {
                                 if let Some(this) = weak_self.upgrade() {
                                     Self::load_workspace_data(&this, cx);
                                 }
@@ -405,7 +424,7 @@ impl Render for ListTaskPanel {
                                     .icon(Icon::new(IconName::Plus))
                                     .ghost(),
                             )
-                            .content(move |_state, window, cx| {
+                            .content(move |_state, _window, cx| {
                                 let popover_entity = cx.entity();
                                 let panel_weak_clone = panel_weak.clone();
 

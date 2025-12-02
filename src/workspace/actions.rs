@@ -251,10 +251,12 @@ impl DockWorkspace {
                 }
             };
 
+            let workspace_id = workspace.id.clone();
+
             // Create task in workspace
             let task = match workspace_service
                 .create_task(
-                    &workspace.id,
+                    &workspace_id,
                     task_input.clone(),
                     agent_name.clone(),
                     mode.clone(),
@@ -262,7 +264,11 @@ impl DockWorkspace {
                 .await
             {
                 Ok(task) => {
-                    log::info!("Created workspace task: {} in workspace: {}", task.name, workspace.id);
+                    log::info!(
+                        "Created workspace task: {} in workspace: {}",
+                        task.name,
+                        workspace_id
+                    );
                     task
                 }
                 Err(e) => {

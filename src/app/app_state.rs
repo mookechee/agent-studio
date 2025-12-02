@@ -1,9 +1,11 @@
-use std::sync::Arc;
 use gpui::{App, AppContext, Entity, Global, SharedString};
+use std::sync::Arc;
 
 use crate::{
     core::agent::{AgentManager, PermissionStore},
-    core::event_bus::{PermissionBusContainer, SessionUpdateBusContainer},
+    core::event_bus::{
+        PermissionBusContainer, SessionUpdateBusContainer, WorkspaceUpdateBusContainer,
+    },
     core::services::{AgentService, MessageService, WorkspaceService},
 };
 
@@ -20,6 +22,7 @@ pub struct AppState {
     permission_store: Option<Arc<PermissionStore>>,
     pub session_bus: SessionUpdateBusContainer,
     pub permission_bus: PermissionBusContainer,
+    pub workspace_bus: WorkspaceUpdateBusContainer,
     /// Current welcome session - created when user selects an agent
     welcome_session: Option<WelcomeSession>,
     /// Service layer
@@ -37,7 +40,15 @@ impl AppState {
             std::path::PathBuf::from("workspace-config.json")
         };
 
-        let workspace_service = Arc::new(WorkspaceService::new(config_path));
+        // Create workspace bus
+        let workspace_bus = Arc::new(std::sync::Mutex::new(
+            crate::core::event_bus::workspace_bus::WorkspaceUpdateBus::new(),
+        ));
+
+        // Create workspace service and set its bus
+        let mut workspace_service = WorkspaceService::new(config_path);
+        workspace_service.set_workspace_bus(workspace_bus.clone());
+        let workspace_service = Arc::new(workspace_service);
 
         let state = Self {
             invisible_panels: cx.new(|_| Vec::new()),
@@ -45,6 +56,7 @@ impl AppState {
             permission_store: None,
             session_bus: SessionUpdateBusContainer::new(),
             permission_bus: PermissionBusContainer::new(),
+            workspace_bus,
             welcome_session: None,
             agent_service: None,
             message_service: None,

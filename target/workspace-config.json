@@ -28,6 +28,46 @@
       "session_id": "a13d71f2-dc9c-4723-9ddf-fc53623fc48a",
       "status": "InProgress",
       "created_at": 1764690297
+    },
+    {
+      "id": "812238b3-bc1b-4eba-9adf-8b3f64ce2791",
+      "workspace_id": "9f86bc8d-1ab9-47a2-9ded-f01d9e954c10",
+      "name": "介绍本项目功能",
+      "agent_name": "Iflow",
+      "mode": "Auto",
+      "session_id": "703195d3-8d95-4cb8-88d6-8dcb1e6f3258",
+      "status": "InProgress",
+      "created_at": 1764690761
+    },
+    {
+      "id": "6f1750bb-ee18-4f81-b7cc-eecd33e8f8a3",
+      "workspace_id": "9f86bc8d-1ab9-47a2-9ded-f01d9e954c10",
+      "name": "为本项目UI提供优化建议",
+      "agent_name": "Iflow",
+      "mode": "Auto",
+      "session_id": "8b0d7837-3405-4235-9fb1-ad53eee55780",
+      "status": "InProgress",
+      "created_at": 1764690868
+    },
+    {
+      "id": "95ef29aa-44d9-4615-a72c-528047f8569c",
+      "workspace_id": "9f86bc8d-1ab9-47a2-9ded-f01d9e954c10",
+      "name": "你好",
+      "agent_name": "Iflow",
+      "mode": "Auto",
+      "session_id": "3813b5d2-d6e8-4aaa-89eb-cd6d3b72ce2b",
+      "status": "InProgress",
+      "created_at": 1764694973
+    },
+    {
+      "id": "dd6f3f17-cd23-49f2-a2e9-b9a9386b39c7",
+      "workspace_id": "9f86bc8d-1ab9-47a2-9ded-f01d9e954c10",
+      "name": "你好好",
+      "agent_name": "Iflow",
+      "mode": "Auto",
+      "session_id": "b0f138c4-bd5e-4cd7-9988-280bae2dfdd3",
+      "status": "InProgress",
+      "created_at": 1764695000
     }
   ],
   "active_workspace_id": "9f86bc8d-1ab9-47a2-9ded-f01d9e954c10"

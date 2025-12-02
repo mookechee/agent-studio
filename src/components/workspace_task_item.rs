@@ -67,13 +67,7 @@ impl IntoElement for WorkspaceTaskItem {
             return div().child("Invalid task");
         };
 
-        let mut element = div()
-            .flex()
-            .flex_col()
-            .gap_1()
-            .px_2()
-            .py_2()
-            .rounded_md();
+        let mut element = div().flex().flex_col().gap_1().px_2().py_2().rounded_md();
 
         // Apply selected or hover styles
         element = if self.selected {
@@ -110,9 +104,9 @@ impl IntoElement for WorkspaceTaskItem {
                 .gap_2()
                 .text_xs()
                 .text_color(hsla(0.0, 0.0, 0.6, 1.0))
-                .child(format!("{}", task.agent_name))
+                .child(task.agent_name.to_string())
                 .child("·")
-                .child(format!("{}", task.mode))
+                .child(task.mode.to_string())
                 .child("·")
                 .child(format!("{:?}", task.status)),
         )
