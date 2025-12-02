@@ -4,7 +4,6 @@ mod core;
 mod panels;
 mod schemas;
 mod task_data;
-mod task_turn_view;
 mod utils;
 pub mod workspace;
 
@@ -48,7 +47,6 @@ use gpui::{
 // Re-export from other modules
 pub use menu::UIMenu;
 pub use schemas::{conversation_schema, task_schema};
-pub use task_turn_view::CollapsibleEventTurn;
 pub use title_bar::AppTitleBar;
 
 // Export components
