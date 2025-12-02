@@ -14,8 +14,8 @@ mod test_mock_data;
 // Re-export from panels module
 use crate::panels::{DockPanel, DockPanelContainer, DockPanelState};
 pub use panels::{
-    CodeEditorPanel, ConversationPanel, ConversationPanelAcp, ListTaskPanel,
-    SessionManagerPanel, SettingsWindow, WelcomePanel,
+    CodeEditorPanel, ConversationPanel, ConversationPanelAcp, ListTaskPanel, SessionManagerPanel,
+    SettingsWindow, WelcomePanel,
 };
 
 // Re-export from core module

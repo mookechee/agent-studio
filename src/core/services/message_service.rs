@@ -20,10 +20,7 @@ pub struct MessageService {
 }
 
 impl MessageService {
-    pub fn new(
-        session_bus: SessionUpdateBusContainer,
-        agent_service: Arc<AgentService>,
-    ) -> Self {
+    pub fn new(session_bus: SessionUpdateBusContainer, agent_service: Arc<AgentService>) -> Self {
         Self {
             session_bus,
             agent_service,
@@ -46,7 +43,11 @@ impl MessageService {
         message: String,
     ) -> Result<()> {
         // 1. Verify session exists
-        if self.agent_service.get_session_info(agent_name, session_id).is_none() {
+        if self
+            .agent_service
+            .get_session_info(agent_name, session_id)
+            .is_none()
+        {
             return Err(anyhow!("Session not found: {}", session_id));
         }
 

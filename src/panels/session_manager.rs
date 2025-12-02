@@ -1,5 +1,5 @@
 use gpui::{
-    px, prelude::FluentBuilder, App, AppContext, Context, Entity, FocusHandle, Focusable,
+    prelude::FluentBuilder, px, App, AppContext, Context, Entity, FocusHandle, Focusable,
     IntoElement, ParentElement, Pixels, Render, Styled, Window,
 };
 
@@ -82,7 +82,12 @@ impl SessionManagerPanel {
     }
 
     /// Create a new session for the given agent
-    fn create_new_session(&mut self, agent_name: String, window: &mut Window, cx: &mut Context<Self>) {
+    fn create_new_session(
+        &mut self,
+        agent_name: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let agent_service = match AppState::global(cx).agent_service() {
             Some(service) => service.clone(),
             None => {
@@ -95,7 +100,11 @@ impl SessionManagerPanel {
         cx.spawn_in(window, async move |_this, window| {
             match agent_service.create_session(&agent_name).await {
                 Ok(session_id) => {
-                    log::info!("[SessionManagerPanel] Created session {} for agent {}", session_id, agent_name);
+                    log::info!(
+                        "[SessionManagerPanel] Created session {} for agent {}",
+                        session_id,
+                        agent_name
+                    );
                     _ = window.update(|_window, cx| {
                         if let Some(entity) = weak_self.upgrade() {
                             entity.update(cx, |this, cx| {
@@ -108,11 +117,18 @@ impl SessionManagerPanel {
                     log::error!("[SessionManagerPanel] Failed to create session: {}", e);
                 }
             }
-        }).detach();
+        })
+        .detach();
     }
 
     /// Close a session
-    fn close_session(&mut self, agent_name: String, session_id: String, window: &mut Window, cx: &mut Context<Self>) {
+    fn close_session(
+        &mut self,
+        agent_name: String,
+        session_id: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let agent_service = match AppState::global(cx).agent_service() {
             Some(service) => service.clone(),
             None => {
@@ -125,7 +141,11 @@ impl SessionManagerPanel {
         cx.spawn_in(window, async move |_this, window| {
             match agent_service.close_session(&agent_name, &session_id).await {
                 Ok(_) => {
-                    log::info!("[SessionManagerPanel] Closed session {} for agent {}", session_id, agent_name);
+                    log::info!(
+                        "[SessionManagerPanel] Closed session {} for agent {}",
+                        session_id,
+                        agent_name
+                    );
                     _ = window.update(|_window, cx| {
                         if let Some(entity) = weak_self.upgrade() {
                             entity.update(cx, |this, cx| {
@@ -138,7 +158,8 @@ impl SessionManagerPanel {
                     log::error!("[SessionManagerPanel] Failed to close session: {}", e);
                 }
             }
-        }).detach();
+        })
+        .detach();
     }
 
     /// Open a conversation panel for the given session

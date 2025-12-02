@@ -3,9 +3,10 @@ use gpui_component::dock::{DockItem, DockPlacement};
 use std::sync::Arc;
 
 use crate::{
-    panels::dock_panel::DockPanelContainer, utils, AddPanel, AppState, ConversationPanelAcp,
-    CreateTaskFromWelcome, NewSessionConversationPanel, ShowConversationPanel, ShowWelcomePanel,
-    ToggleDockToggleButton, TogglePanelVisible, WelcomePanel,
+    panels::{dock_panel::DockPanelContainer, DockPanel},
+    utils, AddPanel, AppState, ConversationPanelAcp, CreateTaskFromWelcome,
+    NewSessionConversationPanel, ShowConversationPanel, ShowWelcomePanel, ToggleDockToggleButton,
+    TogglePanelVisible, WelcomePanel,
 };
 
 use super::DockWorkspace;
@@ -218,7 +219,11 @@ impl DockWorkspace {
                 // No welcome session, create new one
                 match agent_service.create_session(&agent_name).await {
                     Ok(session_id) => {
-                        log::info!("Created new session {} for agent {}", session_id, agent_name);
+                        log::info!(
+                            "Created new session {} for agent {}",
+                            session_id,
+                            agent_name
+                        );
                         session_id
                     }
                     Err(e) => {
@@ -236,8 +241,7 @@ impl DockWorkspace {
                 AppState::global_mut(cx).clear_welcome_session();
 
                 // Create panel - this subscribes to the session
-                let conversation_panel =
-                    DockPanelContainer::panel_for_session(session_id, window, cx);
+                let conversation_panel = Self::panel_for_session(session_id, window, cx);
 
                 let conversation_item =
                     DockItem::tab(conversation_panel, &dock_area.downgrade(), window, cx);
@@ -272,5 +276,34 @@ impl DockWorkspace {
             }
         })
         .detach();
+    }
+    /// Create a panel specifically for a session (ConversationPanelAcp only)
+    pub fn panel_for_session(
+        session_id: String,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Entity<DockPanelContainer> {
+        use crate::ConversationPanelAcp;
+
+        let name = ConversationPanelAcp::title();
+        let description = ConversationPanelAcp::description();
+        let story = ConversationPanelAcp::view_for_session(session_id, window, cx);
+        let story_klass = ConversationPanelAcp::klass();
+
+        let view = cx.new(|cx| {
+            let mut story = DockPanelContainer::new(cx)
+                .story(story.into(), story_klass)
+                .on_active(ConversationPanelAcp::on_active_any);
+            story.focus_handle = cx.focus_handle();
+            story.closable = ConversationPanelAcp::closable();
+            story.zoomable = ConversationPanelAcp::zoomable();
+            story.name = name.into();
+            story.description = description.into();
+            story.title_bg = ConversationPanelAcp::title_bg();
+            story.paddings = ConversationPanelAcp::paddings();
+            story
+        });
+
+        view
     }
 }

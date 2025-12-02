@@ -117,11 +117,7 @@ impl AgentService {
         if let Some(agent_sessions) = sessions.get_mut(agent_name) {
             if let Some(info) = agent_sessions.get_mut(session_id) {
                 info.status = SessionStatus::Closed;
-                log::info!(
-                    "Closed session {} for agent {}",
-                    session_id,
-                    agent_name
-                );
+                log::info!("Closed session {} for agent {}", session_id, agent_name);
             }
         }
         Ok(())

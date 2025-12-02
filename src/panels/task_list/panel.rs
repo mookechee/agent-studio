@@ -1,6 +1,9 @@
 use std::rc::Rc;
 
-use gpui::{div, px, App, AppContext, Context, Entity, FocusHandle, Focusable, IntoElement, InteractiveElement, MouseButton, ParentElement, Render, Styled, Subscription, Window};
+use gpui::{
+    div, px, App, AppContext, Context, Entity, FocusHandle, Focusable, InteractiveElement,
+    IntoElement, MouseButton, ParentElement, Pixels, Render, Styled, Subscription, Window,
+};
 use gpui_component::{
     button::{Button, ButtonVariants},
     h_flex,
@@ -13,8 +16,8 @@ use agent_client_protocol_schema::{ContentBlock, SessionUpdate};
 
 use crate::app::actions::{AddSessionToList, SelectedAgentTask};
 use crate::task_schema::{AgentTask, TaskStatus};
-use crate::{AppState, CreateTaskFromWelcome, ShowConversationPanel, ShowWelcomePanel};
 use crate::utils;
+use crate::{AppState, CreateTaskFromWelcome, ShowConversationPanel, ShowWelcomePanel};
 
 use super::types::TaskListDelegate;
 
@@ -37,6 +40,9 @@ impl crate::panels::dock_panel::DockPanel for ListTaskPanel {
     fn new_view(window: &mut Window, cx: &mut App) -> Entity<impl Render> {
         Self::view(window, cx)
     }
+    fn paddings() -> Pixels {
+        px(12.)
+    }
 }
 
 impl ListTaskPanel {
@@ -53,7 +59,9 @@ impl ListTaskPanel {
         let mut delegate = TaskListDelegate::new();
         delegate.load_all_tasks();
 
-        let task_list = AppContext::new(cx, |cx| ListState::new(delegate, window, cx).searchable(true));
+        let task_list = AppContext::new(cx, |cx| {
+            ListState::new(delegate, window, cx).searchable(true)
+        });
 
         // Set the weak reference to the list state in the delegate
         task_list.update(cx, |list, _| {

@@ -139,12 +139,9 @@ impl WelcomePanel {
             this._subscriptions.push(subscription);
 
             // Refresh sessions when agent_select loses focus (agent selection changed)
-            let subscription = cx.on_focus_lost(
-                window,
-                |this: &mut Self, window, cx| {
-                    this.on_agent_changed(window, cx);
-                },
-            );
+            let subscription = cx.on_focus_lost(window, |this: &mut Self, window, cx| {
+                this.on_agent_changed(window, cx);
+            });
             this._subscriptions.push(subscription);
 
             // Subscribe to session_select changes to update welcome_session
@@ -209,14 +206,8 @@ impl WelcomePanel {
         let agent_select = cx.new(|cx| SelectState::new(agent_list, default_agent, window, cx));
 
         // Initialize session selector (initially empty)
-        let session_select = cx.new(|cx| {
-            SelectState::new(
-                vec!["No sessions".to_string()],
-                None,
-                window,
-                cx,
-            )
-        });
+        let session_select =
+            cx.new(|cx| SelectState::new(vec!["No sessions".to_string()], None, window, cx));
 
         let mut panel = Self {
             focus_handle: cx.focus_handle(),
@@ -326,7 +317,12 @@ impl WelcomePanel {
     }
 
     /// Refresh sessions for the currently selected agent
-    fn refresh_sessions_for_agent(&mut self, agent_name: &str, window: &mut Window, cx: &mut Context<Self>) {
+    fn refresh_sessions_for_agent(
+        &mut self,
+        agent_name: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let agent_service = match AppState::global(cx).agent_service() {
             Some(service) => service.clone(),
             None => return,
@@ -407,7 +403,11 @@ impl WelcomePanel {
                         if let Some(this) = weak_self.upgrade() {
                             this.update(cx, |this, cx| {
                                 this.current_session_id = Some(session_id.clone());
-                                this.refresh_sessions_for_agent(&agent_name_for_session, window, cx);
+                                this.refresh_sessions_for_agent(
+                                    &agent_name_for_session,
+                                    window,
+                                    cx,
+                                );
                             });
                         }
                     });
@@ -416,7 +416,8 @@ impl WelcomePanel {
                     log::error!("[WelcomePanel] Failed to create session: {}", e);
                 }
             }
-        }).detach();
+        })
+        .detach();
     }
 
     /// Handles sending the task based on the current input, mode, and agent selections.

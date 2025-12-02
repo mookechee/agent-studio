@@ -9,9 +9,9 @@ use gpui_component::{
 use std::{sync::Arc, time::Duration};
 
 use crate::{
-    panels::dock_panel::DockPanelContainer, AddPanel, AppState, AppTitleBar, SessionManagerPanel,
-    CodeEditorPanel, ConversationPanelAcp, ListTaskPanel, SessionManagerPanel,
-    ToggleDockToggleButton, TogglePanelVisible,
+    panels::dock_panel::DockPanelContainer, AddPanel, AppState, AppTitleBar, CodeEditorPanel,
+    ConversationPanelAcp, ListTaskPanel, SessionManagerPanel, ToggleDockToggleButton,
+    TogglePanelVisible,
 };
 
 // Action handlers module

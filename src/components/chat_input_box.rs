@@ -218,11 +218,16 @@ impl RenderOnce for ChatInputBox {
                                             Select::new(&agent_select).small().appearance(false),
                                         )
                                     })
-                                    .when_some(self.session_select.clone(), |this, session_select| {
-                                        this.child(
-                                            Select::new(&session_select).small().appearance(false),
-                                        )
-                                    })
+                                    .when_some(
+                                        self.session_select.clone(),
+                                        |this, session_select| {
+                                            this.child(
+                                                Select::new(&session_select)
+                                                    .small()
+                                                    .appearance(false),
+                                            )
+                                        },
+                                    )
                                     .when_some(on_new_session, |this, on_new_session_callback| {
                                         this.child(
                                             Button::new("new-session")

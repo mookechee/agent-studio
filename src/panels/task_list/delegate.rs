@@ -1,10 +1,17 @@
 use std::time::Duration;
 
-use gpui::{div, px, App, Context, IntoElement, InteractiveElement, MouseButton, ParentElement, Styled, Task, Timer, Window};
-use gpui_component::{h_flex, list::{ListDelegate, ListState}, v_flex, ActiveTheme, Icon, IconName, IndexPath};
+use gpui::{
+    div, px, App, Context, InteractiveElement, IntoElement, MouseButton, ParentElement, Styled,
+    Task, Timer, Window,
+};
+use gpui_component::{
+    h_flex,
+    list::{ListDelegate, ListState},
+    v_flex, ActiveTheme, Icon, IconName, IndexPath,
+};
 
-use crate::components::TaskListItem;
 use crate::app::actions::SelectedAgentTask;
+use crate::components::TaskListItem;
 
 use super::types::TaskListDelegate as Delegate;
 
