@@ -140,6 +140,12 @@ impl WorkspaceService {
         config.workspaces.clone()
     }
 
+    /// Get the entire workspace configuration
+    pub async fn get_config(&self) -> WorkspaceConfig {
+        let config = self.config.read().await;
+        config.clone()
+    }
+
     /// Get the active workspace
     pub async fn get_active_workspace(&self) -> Option<Workspace> {
         let config = self.config.read().await;

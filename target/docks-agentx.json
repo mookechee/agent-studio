@@ -1,34 +1,21 @@
 {
   "version": 5,
   "center": {
-    "panel_name": "StackPanel",
+    "panel_name": "TabPanel",
     "children": [
       {
-        "panel_name": "TabPanel",
-        "children": [
-          {
-            "panel_name": "DockPanelContainer",
-            "children": [],
-            "info": {
-              "panel": {
-                "story_klass": "ConversationPanelAcp"
-              }
-            }
-          }
-        ],
+        "panel_name": "DockPanelContainer",
+        "children": [],
         "info": {
-          "tabs": {
-            "active_index": 0
+          "panel": {
+            "story_klass": "WelcomePanel"
           }
         }
       }
     ],
     "info": {
-      "stack": {
-        "sizes": [
-          100.0
-        ],
-        "axis": 0
+      "tabs": {
+        "active_index": 0
       }
     }
   },
@@ -59,7 +46,7 @@
       "info": {
         "stack": {
           "sizes": [
-            100.0
+            872.6667
           ],
           "axis": 1
         }
@@ -84,15 +71,6 @@
                   "story_klass": "CodeEditorPanel"
                 }
               }
-            },
-            {
-              "panel_name": "DockPanelContainer",
-              "children": [],
-              "info": {
-                "panel": {
-                  "story_klass": "SessionManagerPanel"
-                }
-              }
             }
           ],
           "info": {
@@ -105,14 +83,14 @@
       "info": {
         "stack": {
           "sizes": [
-            100.0
+            872.6667
           ],
           "axis": 1
         }
       }
     },
     "placement": "right",
-    "size": 480.0,
+    "size": 427.3333,
     "open": true
   },
   "bottom_dock": {
@@ -142,7 +120,7 @@
       "info": {
         "stack": {
           "sizes": [
-            100.0
+            28.666666
           ],
           "axis": 1
         }
@@ -150,6 +128,6 @@
     },
     "placement": "bottom",
     "size": 200.0,
-    "open": true
+    "open": false
   }
 }

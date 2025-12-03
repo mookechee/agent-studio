@@ -20,9 +20,11 @@ use gpui_component::{
 use rand::Rng;
 use std::rc::Rc;
 
+use crate::core::event_bus::WorkspaceUpdateEvent;
+use crate::core::services::WorkspaceService;
 use crate::panels::dock_panel::DockPanel;
 use crate::schemas::workspace_schema::{TaskStatus, WorkspaceTask};
-use crate::{ShowConversationPanel, ShowWelcomePanel};
+use crate::{utils, AppState, ShowConversationPanel, ShowWelcomePanel};
 
 // ============================================================================
 // Data Models
@@ -52,6 +54,7 @@ pub struct TaskPanel {
     selected_task_id: Option<String>,
     view_mode: ViewMode,
     _subscriptions: Vec<Subscription>,
+    use_real_data: bool, // Flag to distinguish between random data and real data
 }
 
 impl DockPanel for TaskPanel {
@@ -76,8 +79,14 @@ impl TaskPanel {
     pub fn view(window: &mut Window, cx: &mut App) -> Entity<Self> {
         let entity = cx.new(|cx| Self::new(window, cx));
 
-        // Load initial random data
-        Self::load_random_data(&entity, cx);
+        // Try to load real workspace data first
+        if let Some(workspace_service) = AppState::global(cx).workspace_service() {
+            Self::load_workspace_data(&entity, workspace_service.clone(), cx);
+            Self::subscribe_to_workspace_updates(&entity, cx);
+        } else {
+            // Fallback to random data if no workspace service
+            Self::load_random_data(&entity, cx);
+        }
 
         entity
     }
@@ -89,13 +98,87 @@ impl TaskPanel {
             selected_task_id: None,
             view_mode: ViewMode::Tree,
             _subscriptions: Vec::new(),
+            use_real_data: false,
         }
+    }
+
+    /// Load workspace data from WorkspaceService
+    fn load_workspace_data(
+        entity: &Entity<Self>,
+        workspace_service: std::sync::Arc<WorkspaceService>,
+        cx: &mut App,
+    ) {
+        let entity_clone = entity.clone();
+        cx.spawn(async move |cx| {
+            let workspaces_list = workspace_service.list_workspaces().await;
+            let config = workspace_service.get_config().await;
+
+            cx.update(|cx| {
+                entity_clone.update(cx, |this, cx| {
+                    this.use_real_data = true;
+                    this.workspaces = workspaces_list
+                        .into_iter()
+                        .map(|ws| {
+                            let tasks = config
+                                .tasks
+                                .iter()
+                                .filter(|t| t.workspace_id == ws.id)
+                                .map(|t| Rc::new(t.clone()))
+                                .collect();
+
+                            WorkspaceGroup {
+                                id: ws.id.clone(),
+                                name: ws.name.clone(),
+                                tasks,
+                                is_expanded: true,
+                            }
+                        })
+                        .collect();
+
+                    // Select the first task if available
+                    if let Some(first_workspace) = this.workspaces.first() {
+                        if let Some(first_task) = first_workspace.tasks.first() {
+                            this.selected_task_id = Some(first_task.id.clone());
+                        }
+                    }
+
+                    cx.notify();
+                });
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    /// Subscribe to workspace update events
+    fn subscribe_to_workspace_updates(_entity: &Entity<Self>, cx: &mut App) {
+        let workspace_bus = AppState::global(cx).workspace_bus.clone();
+
+        workspace_bus.lock().unwrap().subscribe(move |event| {
+            match event {
+                WorkspaceUpdateEvent::WorkspaceAdded { workspace_id } => {
+                    log::debug!("TaskPanel received WorkspaceAdded: {}", workspace_id);
+                    // Note: Cannot reload here due to async/sync boundary
+                    // The add_workspace method will trigger a reload manually
+                }
+                WorkspaceUpdateEvent::WorkspaceRemoved { workspace_id } => {
+                    log::debug!("TaskPanel received WorkspaceRemoved: {}", workspace_id);
+                }
+                WorkspaceUpdateEvent::TaskCreated { workspace_id, task_id } => {
+                    log::debug!("TaskPanel received TaskCreated: {} in {}", task_id, workspace_id);
+                }
+                WorkspaceUpdateEvent::TaskUpdated { task_id } => {
+                    log::debug!("TaskPanel received TaskUpdated: {}", task_id);
+                }
+            }
+        });
     }
 
     /// Load random workspace and task data
     fn load_random_data(entity: &Entity<Self>, cx: &mut App) {
         let workspaces = Self::generate_random_workspaces();
         entity.update(cx, |this, cx| {
+            this.use_real_data = false;
             this.workspaces = workspaces;
             // Select the first task if available
             if let Some(first_workspace) = this.workspaces.first() {
@@ -195,6 +278,43 @@ impl TaskPanel {
         }
     }
 
+    fn add_workspace(&mut self, cx: &mut Context<Self>) {
+        let workspace_service = match AppState::global(cx).workspace_service() {
+            Some(service) => service.clone(),
+            None => {
+                log::warn!("WorkspaceService not available");
+                return;
+            }
+        };
+
+        cx.spawn(async move |entity, cx| {
+            // Open folder picker
+            if let Some(folder_path) = utils::pick_folder("选择工作区文件夹").await {
+                log::info!("Selected folder: {:?}", folder_path);
+
+                // Add workspace via service
+                match workspace_service.add_workspace(folder_path.clone()).await {
+                    Ok(workspace) => {
+                        log::info!("Successfully added workspace: {}", workspace.name);
+
+                        // Reload workspace data
+                        cx.update(|cx| {
+                            if let Some(entity_strong) = entity.upgrade() {
+                                Self::load_workspace_data(&entity_strong, workspace_service.clone(), cx);
+                            }
+                        }).ok();
+                    }
+                    Err(e) => {
+                        log::error!("Failed to add workspace: {}", e);
+                    }
+                }
+            } else {
+                log::info!("Folder selection cancelled");
+            }
+        })
+        .detach();
+    }
+
     fn select_task(&mut self, task_id: String, window: &mut Window, cx: &mut Context<Self>) {
         self.selected_task_id = Some(task_id.clone());
 
@@ -274,7 +394,10 @@ impl TaskPanel {
                     .ghost()
                     .small()
                     .icon(IconName::FolderOpen)
-                    .label("添加工作区"),
+                    .label("添加工作区")
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.add_workspace(cx);
+                    })),
             )
             .child(
                 h_flex()
