@@ -151,7 +151,7 @@ struct ResourceItemState {
 
 impl ResourceItemState {
     fn new(resource: ResourceInfo) -> Self {
-        tracing::info!("📦 Creating ResourceItemState for: {}", resource.name);
+        tracing::debug!("📦 Creating ResourceItemState for: {}", resource.name);
         Self {
             resource,
             open: false,
@@ -160,7 +160,7 @@ impl ResourceItemState {
 
     fn toggle(&mut self, cx: &mut Context<Self>) {
         self.open = !self.open;
-        tracing::info!(
+        tracing::debug!(
             "🔄 ResourceItem toggle: {} -> {}",
             self.resource.name,
             self.open
@@ -238,7 +238,7 @@ impl Render for ResourceItemState {
                             .xsmall()
                             .on_click(cx.listener(
                                 |this, _ev, _window, cx| {
-                                    tracing::info!(
+                                    tracing::debug!(
                                         "🖱️ ResourceItem button clicked: {}",
                                         this.resource.name
                                     );
@@ -281,7 +281,7 @@ struct ToolCallItemState {
 
 impl ToolCallItemState {
     fn new(tool_call: ToolCall, open: bool) -> Self {
-        tracing::info!(
+        tracing::debug!(
             "🔧 Creating ToolCallItemState: {} (open: {})",
             tool_call.title,
             open
@@ -291,7 +291,7 @@ impl ToolCallItemState {
 
     fn toggle(&mut self, cx: &mut Context<Self>) {
         self.open = !self.open;
-        tracing::info!(
+        tracing::debug!(
             "🔄 ToolCallItem toggle: {} -> {}",
             self.tool_call.title,
             self.open
@@ -365,7 +365,7 @@ impl Render for ToolCallItemState {
                             .xsmall()
                             .on_click(cx.listener(
                                 |this, _ev, _window, cx| {
-                                    tracing::info!(
+                                    tracing::debug!(
                                         "🖱️ ToolCallItem button clicked: {}",
                                         this.tool_call.title
                                     );
@@ -505,7 +505,7 @@ impl ConversationPanel {
     }
 
     fn new(_: &mut Window, cx: &mut App) -> Self {
-        tracing::info!("🚀 Initializing ConversationPanel");
+        tracing::debug!("🚀 Initializing ConversationPanel");
 
         let json_content = include_str!("../fixtures/mock_conversation.json");
         let items: Vec<ConversationItem> =
@@ -516,22 +516,22 @@ impl ConversationPanel {
         for item in items.iter() {
             match item {
                 ConversationItem::UserMessage { id, data } => {
-                    tracing::info!("👤 Creating UserMessage entity: {}", id);
+                    tracing::debug!("👤 Creating UserMessage entity: {}", id);
                     let entity = Self::create_user_message(data.clone(), cx);
                     rendered_items.push(RenderedItem::UserMessage(entity));
                 }
                 ConversationItem::AgentMessage { id, data } => {
-                    tracing::info!("🤖 Storing AgentMessage data: {}", id);
+                    tracing::debug!("🤖 Storing AgentMessage data: {}", id);
                     let agent_data = Self::create_agent_message_data(data.clone());
                     rendered_items.push(RenderedItem::AgentMessage(id.clone(), agent_data));
                 }
                 ConversationItem::Plan(plan_schema) => {
-                    tracing::info!("📋 Storing Plan data");
+                    tracing::debug!("📋 Storing Plan data");
                     let plan = Self::create_plan(plan_schema.clone());
                     rendered_items.push(RenderedItem::Plan(plan));
                 }
                 ConversationItem::ToolCallGroup { items: tool_items } => {
-                    tracing::info!("🔧 Creating ToolCallGroup with {} items", tool_items.len());
+                    tracing::debug!("🔧 Creating ToolCallGroup with {} items", tool_items.len());
                     let tool_entities: Vec<Entity<ToolCallItemState>> = tool_items
                         .iter()
                         .map(|tool_item| Self::create_tool_call(tool_item.clone(), cx))
@@ -541,7 +541,7 @@ impl ConversationPanel {
             }
         }
 
-        tracing::info!(
+        tracing::debug!(
             "✅ ConversationPanel initialized with {} items",
             rendered_items.len()
         );
@@ -578,7 +578,7 @@ impl ConversationPanel {
                 .map(|resource_info| cx.new(|_| ResourceItemState::new(resource_info)))
                 .collect();
 
-            tracing::info!("  └─ Created {} resource items", resource_items.len());
+            tracing::debug!("  └─ Created {} resource items", resource_items.len());
 
             UserMessageView {
                 data: data_entity,
