@@ -29,6 +29,7 @@ pub struct CodeEditorPanel {
     soft_wrap: bool,
     show_file_tree: bool,
     lsp_store: CodeEditorPanelLspStore,
+    current_file_path: Option<PathBuf>,
     _subscriptions: Vec<Subscription>,
     _lint_task: Task<()>,
 }
@@ -102,6 +103,7 @@ impl CodeEditorPanel {
             soft_wrap: false,
             show_file_tree: true,
             lsp_store,
+            current_file_path: None,
             _subscriptions,
             _lint_task: Task::ready(()),
         }
@@ -240,6 +242,7 @@ impl CodeEditorPanel {
             .unwrap_or_default();
         let language = Language::from_str(&language);
         let content = std::fs::read_to_string(&path)?;
+        let path_clone = path.clone();
 
         window
             .spawn(cx, async move |window| {
@@ -250,6 +253,7 @@ impl CodeEditorPanel {
                     });
 
                     this.language = language;
+                    this.current_file_path = Some(path_clone);
                     cx.notify();
                 });
             })
@@ -457,9 +461,12 @@ impl CodeEditorPanel {
             text.slice(start_offset..end_offset).to_string()
         });
 
-        // 获取当前文件路径（这里使用占位符，实际应该从文件系统获取）
-        // TODO: 在 CodeEditorPanel 中添加文件路径字段
-        let file_path = "current_file.rs".to_string();
+        // 获取当前文件路径
+        let file_path = self.current_file_path
+            .as_ref()
+            .and_then(|p| p.to_str())
+            .unwrap_or("untitled")
+            .to_string();
 
         log::info!(
             "[CodeEditorPanel] Creating AddCodeSelection action - file: {}, start: {}:{}, end: {}:{}, content length: {}",
