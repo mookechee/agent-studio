@@ -1136,6 +1136,7 @@ impl Render for ConversationPanel {
                         ChatInputBox::new("chat-input", self.input_state.clone())
                             .pasted_images(self.pasted_images.clone())
                             .code_selections(self.code_selections.clone())
+                            .session_status(self.session_status.as_ref().map(|info| info.status.clone()))
                             .on_paste(move |window, cx| {
                                 entity.update(cx, |this, cx| {
                                     this.handle_paste(window, cx);

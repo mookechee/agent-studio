@@ -17,6 +17,7 @@ use gpui_component::{
 use agent_client_protocol::ImageContent;
 
 use crate::app::actions::AddCodeSelection;
+use crate::core::services::SessionStatus;
 
 /// A reusable chat input component with context controls and send button.
 ///
@@ -46,6 +47,7 @@ pub struct ChatInputBox {
     on_remove_image: Option<Rc<dyn Fn(&usize, &mut Window, &mut App) + 'static>>,
     on_remove_code_selection: Option<Rc<dyn Fn(&usize, &mut Window, &mut App) + 'static>>,
     on_paste: Option<Rc<dyn Fn(&mut Window, &mut App) + 'static>>,
+    session_status: Option<SessionStatus>,      // Session status for button state
 }
 
 impl ChatInputBox {
@@ -69,6 +71,7 @@ impl ChatInputBox {
             on_remove_image: None,
             on_remove_code_selection: None,
             on_paste: None,
+            session_status: None,
         }
     }
 
@@ -176,6 +179,12 @@ impl ChatInputBox {
         F: Fn(&usize, &mut Window, &mut App) + 'static,
     {
         self.on_remove_code_selection = Some(Rc::new(callback));
+        self
+    }
+
+    /// Set the session status (affects send button appearance)
+    pub fn session_status(mut self, status: Option<SessionStatus>) -> Self {
+        self.session_status = status;
         self
     }
 }
@@ -454,13 +463,21 @@ impl RenderOnce for ChatInputBox {
                                     ),
                             )
                             .child({
+                                // Determine button icon and color based on session status
+                                let (icon, is_in_progress) = match self.session_status {
+                                    Some(SessionStatus::InProgress) => {
+                                        (Icon::new(crate::assets::Icon::SquarePause), true)
+                                    }, 
+                                    _ => (Icon::new(IconName::ArrowUp), false),
+                                };
+
                                 let mut btn = Button::new("send")
-                                    .icon(Icon::new(IconName::ArrowUp))
+                                    .icon(icon)
                                     .rounded_full()
                                     .small()
                                     .disabled(is_empty);
 
-                                // Set button colors based on empty state
+                                // Set button colors based on state
                                 if is_empty {
                                     // Disabled state: lighter/muted color
                                     btn = btn.custom(
@@ -468,8 +485,16 @@ impl RenderOnce for ChatInputBox {
                                             .color(theme.muted.opacity(0.5))
                                             .foreground(theme.muted_foreground.opacity(0.5)),
                                     );
+                                } else if is_in_progress {
+                                    // InProgress state: red background with white foreground
+                                    btn = btn.custom(
+                                        ButtonCustomVariant::new(cx)
+                                            .color(theme.red)
+                                            .foreground(theme.background)
+                                            .hover(theme.red.opacity(0.85)),
+                                    );
                                 } else {
-                                    // Enabled state: primary color with hover effect
+                                    // Normal/Pending state: primary color with hover effect
                                     btn = btn.custom(
                                         ButtonCustomVariant::new(cx)
                                             .color(theme.primary)
