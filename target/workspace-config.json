@@ -125,6 +125,16 @@
       "session_id": "67f8501e-3e97-4aa0-a210-0261668bb71f",
       "status": "InProgress",
       "created_at": 1764830882
+    },
+    {
+      "id": "7fe64b3f-8106-4e5d-9017-f3295cf96594",
+      "workspace_id": "9f86bc8d-1ab9-47a2-9ded-f01d9e954c10",
+      "name": "介绍一下本项目",
+      "agent_name": "Iflow",
+      "mode": "Auto",
+      "session_id": "31606d49-8b8a-4241-805c-2140057a424f",
+      "status": "InProgress",
+      "created_at": 1765270676
     }
   ],
   "active_workspace_id": "9f86bc8d-1ab9-47a2-9ded-f01d9e954c10"

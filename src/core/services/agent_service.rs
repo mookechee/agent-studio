@@ -67,14 +67,15 @@ impl AgentService {
     // ========== Agent Operations ==========
 
     /// List all available agents
-    pub fn list_agents(&self) -> Vec<String> {
-        self.agent_manager.list_agents()
+    pub async fn list_agents(&self) -> Vec<String> {
+        self.agent_manager.list_agents().await
     }
 
     /// Get agent handle (internal use)
-    fn get_agent_handle(&self, name: &str) -> Result<Arc<AgentHandle>> {
+    async fn get_agent_handle(&self, name: &str) -> Result<Arc<AgentHandle>> {
         self.agent_manager
             .get(name)
+            .await
             .ok_or_else(|| anyhow!("Agent not found: {}", name))
     }
 
@@ -82,7 +83,7 @@ impl AgentService {
 
     /// Create a new session for the agent
     pub async fn create_session(&self, agent_name: &str) -> Result<String> {
-        let agent_handle = self.get_agent_handle(agent_name)?;
+        let agent_handle = self.get_agent_handle(agent_name).await?;
 
         let mut request = acp::NewSessionRequest::new(std::env::current_dir().unwrap_or_default());
         request.cwd = std::env::current_dir().unwrap_or_default();
@@ -135,6 +136,26 @@ impl AgentService {
                 log::info!("Closed session {} for agent {}", session_id, agent_name);
             }
         }
+        Ok(())
+    }
+
+    /// Cancel an ongoing session operation
+    pub async fn cancel_session(&self, agent_name: &str, session_id: &str) -> Result<()> {
+        // Get the agent handle
+        let agent_handle = self.get_agent_handle(agent_name).await?;
+
+        // Send cancel request to the agent
+        agent_handle.cancel(session_id.to_string()).await?;
+
+        // Update session status to Idle
+        let mut sessions = self.sessions.write().unwrap();
+        if let Some(agent_sessions) = sessions.get_mut(agent_name) {
+            if let Some(info) = agent_sessions.get_mut(session_id) {
+                info.status = SessionStatus::Idle;
+                log::info!("Cancelled session {} for agent {}", session_id, agent_name);
+            }
+        }
+
         Ok(())
     }
 
@@ -192,7 +213,7 @@ impl AgentService {
         session_id: &str,
         prompt: Vec<acp::ContentBlock>,
     ) -> Result<PromptResponse> {
-        let agent_handle = self.get_agent_handle(agent_name)?;
+        let agent_handle = self.get_agent_handle(agent_name).await?;
         self.update_session_status(agent_name, session_id, SessionStatus::InProgress);
         let request = acp::PromptRequest::new(acp::SessionId::from(session_id.to_string()), prompt);
 

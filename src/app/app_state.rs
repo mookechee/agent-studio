@@ -5,10 +5,10 @@ use std::sync::Arc;
 use crate::{
     core::agent::{AgentManager, PermissionStore},
     core::event_bus::{
-        CodeSelectionBusContainer, PermissionBusContainer, SessionUpdateBusContainer,
-        WorkspaceUpdateBusContainer,
+        AgentConfigBusContainer, CodeSelectionBusContainer, PermissionBusContainer,
+        SessionUpdateBusContainer, WorkspaceUpdateBusContainer,
     },
-    core::services::{AgentService, MessageService, PersistenceService, WorkspaceService},
+    core::services::{AgentConfigService, AgentService, MessageService, PersistenceService, WorkspaceService},
 };
 
 /// Welcome session info - stores the session created when user selects an agent
@@ -26,12 +26,16 @@ pub struct AppState {
     pub permission_bus: PermissionBusContainer,
     pub workspace_bus: WorkspaceUpdateBusContainer,
     pub code_selection_bus: CodeSelectionBusContainer,
+    pub agent_config_bus: AgentConfigBusContainer,
     /// Current welcome session - created when user selects an agent
     welcome_session: Option<WelcomeSession>,
     /// Service layer
     agent_service: Option<Arc<AgentService>>,
     message_service: Option<Arc<MessageService>>,
     workspace_service: Option<Arc<WorkspaceService>>,
+    agent_config_service: Option<Arc<AgentConfigService>>,
+    /// Config file path for AgentConfigService
+    config_path: Option<PathBuf>,
     /// Current working directory for the code editor
     current_working_dir: PathBuf,
     /// Selected tool call for detail view
@@ -67,10 +71,13 @@ impl AppState {
             code_selection_bus: Arc::new(std::sync::Mutex::new(
                 crate::core::event_bus::code_selection_bus::CodeSelectionBus::new(),
             )),
+            agent_config_bus: AgentConfigBusContainer::new(),
             welcome_session: None,
             agent_service: None,
             message_service: None,
             workspace_service: Some(workspace_service),
+            agent_config_service: None,
+            config_path: None,
             current_working_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             selected_tool_call: cx.new(|_| None),
         };
@@ -86,11 +93,8 @@ impl AppState {
     }
 
     /// Set the AgentManager after async initialization
-    pub fn set_agent_manager(&mut self, manager: Arc<AgentManager>) {
-        log::info!(
-            "Setting AgentManager with {} agents",
-            manager.list_agents().len()
-        );
+    pub fn set_agent_manager(&mut self, manager: Arc<AgentManager>, initial_config: crate::core::config::Config) {
+        log::info!("Setting AgentManager");
 
         // Determine sessions directory path
         let sessions_dir = if cfg!(debug_assertions) {
@@ -111,11 +115,32 @@ impl AppState {
             persistence_service,
         ));
 
+        // Initialize AgentConfigService if config_path is set
+        let agent_config_service = if let Some(config_path) = &self.config_path {
+            let mut service = AgentConfigService::new(
+                initial_config,
+                config_path.clone(),
+                manager.clone(),
+                self.agent_config_bus.clone(),
+            );
+            service.set_agent_service(agent_service.clone());
+            Some(Arc::new(service))
+        } else {
+            log::warn!("Config path not set, AgentConfigService will not be initialized");
+            None
+        };
+
         self.agent_manager = Some(manager);
         self.agent_service = Some(agent_service);
         self.message_service = Some(message_service);
+        self.agent_config_service = agent_config_service;
 
-        log::info!("Initialized service layer (AgentService, MessageService, PersistenceService)");
+        log::info!("Initialized service layer (AgentService, MessageService, PersistenceService, AgentConfigService)");
+    }
+
+    /// Set the config path for AgentConfigService
+    pub fn set_config_path(&mut self, path: PathBuf) {
+        self.config_path = Some(path);
     }
 
     /// Set the PermissionStore
@@ -168,6 +193,11 @@ impl AppState {
     /// Get the WorkspaceService
     pub fn workspace_service(&self) -> Option<&Arc<WorkspaceService>> {
         self.workspace_service.as_ref()
+    }
+
+    /// Get the AgentConfigService
+    pub fn agent_config_service(&self) -> Option<&Arc<AgentConfigService>> {
+        self.agent_config_service.as_ref()
     }
 
     /// Get the current working directory

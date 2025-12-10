@@ -34,11 +34,12 @@ pub use core::{
 pub use app::app_state::{AppState, WelcomeSession};
 pub use app::{
     actions::{
-        About, AddPanel, AddSessionPanel, AddSessionToList, CloseWindow, CreateTaskFromWelcome,
-        Info, NewSessionConversationPanel, Open, Quit, SelectFont, SelectLocale, SelectRadius,
-        SelectScrollbarShow, SelectedAgentTask, SendMessageToSession, ShowConversationPanel,
+        About, AddAgent, AddPanel, AddSessionPanel, AddSessionToList, CancelSession, CloseWindow,
+        CreateTaskFromWelcome, Info, NewSessionConversationPanel, Open, Quit, ReloadAgentConfig,
+        RemoveAgent, RestartAgent, SelectFont, SelectLocale, SelectRadius, SelectScrollbarShow,
+        SelectedAgentTask, SendMessageToSession, SetUploadDir, ShowConversationPanel,
         ShowPanelInfo, ShowToolCallDetail, ShowWelcomePanel, Tab, TabPrev, TestAction,
-        ToggleDockToggleButton, TogglePanelVisible, ToggleSearch,
+        ToggleDockToggleButton, TogglePanelVisible, ToggleSearch, UpdateAgent,
     },
     app_menus, menu, themes, title_bar,
 };
@@ -200,6 +201,14 @@ pub fn init(cx: &mut App) {
     cx.on_action(|_: &Quit, cx: &mut App| {
         cx.quit();
     });
+
+    // Register agent config action handlers
+    cx.on_action(workspace::actions::add_agent);
+    cx.on_action(workspace::actions::update_agent);
+    cx.on_action(workspace::actions::remove_agent);
+    cx.on_action(workspace::actions::restart_agent);
+    cx.on_action(workspace::actions::reload_agent_config);
+    cx.on_action(workspace::actions::set_upload_dir);
 
     register_panel(cx, PANEL_NAME, |_, _, info, window, cx| {
         let story_state = match info {

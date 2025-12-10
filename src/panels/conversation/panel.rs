@@ -805,6 +805,7 @@ impl ConversationPanel {
                                             gpui::ImageFormat::Svg => "image/svg+xml",
                                             gpui::ImageFormat::Bmp => "image/bmp",
                                             gpui::ImageFormat::Tiff => "image/tiff",
+                                            gpui::ImageFormat::Ico => "image/icon",
                                         }
                                         .to_string();
 
@@ -1151,6 +1152,7 @@ impl Render for ConversationPanel {
                             .session_status(
                                 self.session_status.as_ref().map(|info| info.status.clone()),
                             )
+                            .session_id(self.session_id.clone())
                             .on_paste(move |window, cx| {
                                 entity.update(cx, |this, cx| {
                                     this.handle_paste(window, cx);

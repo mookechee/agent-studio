@@ -4,7 +4,10 @@ use gpui_component::dock::{DockItem, DockPlacement};
 use std::sync::Arc;
 
 use crate::{
-    app::actions::{Paste, Submit},
+    app::actions::{
+        AddAgent, CancelSession, Paste, ReloadAgentConfig, RemoveAgent, RestartAgent, SetUploadDir, Submit,
+        UpdateAgent,
+    },
     panels::{dock_panel::DockPanelContainer, DockPanel},
     title_bar::OpenSettings,
     utils, AddPanel, AppState, ConversationPanel, CreateTaskFromWelcome,
@@ -537,16 +540,23 @@ impl DockWorkspace {
             log::info!("Published user message to session bus: {}", session_id);
 
             // Step 2: Get agent handle and send prompt
-            let agent_handle: Option<std::sync::Arc<crate::AgentHandle>> = cx
-                .update(|cx| {
-                    AppState::global(cx).agent_manager().and_then(|m| {
-                        // Get the first available agent
-                        let agents = m.list_agents();
-                        agents.first().and_then(|name| m.get(name))
-                    })
-                })
+            let agent_manager = cx
+                .update(|cx| AppState::global(cx).agent_manager().cloned())
                 .ok()
                 .flatten();
+
+            let agent_handle: Option<std::sync::Arc<crate::AgentHandle>> =
+                if let Some(manager) = agent_manager {
+                    // Get the first available agent
+                    let agents = manager.list_agents().await;
+                    if let Some(name) = agents.first() {
+                        manager.get(name).await
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
 
             if let Some(agent_handle) = agent_handle {
                 // Build prompt with text and images
@@ -581,4 +591,211 @@ impl DockWorkspace {
         })
         .detach();
     }
+
+    /// Handle CancelSession action - cancel an ongoing session operation
+    pub(super) fn on_action_cancel_session(
+        &mut self,
+        action: &CancelSession,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let session_id = action.session_id.clone();
+
+        log::info!("Cancelling session: {}", session_id);
+
+        // Spawn async task to cancel the session
+        cx.spawn(async move |_this, cx| {
+            // Get AgentService to find which agent owns this session
+            let agent_service = cx
+                .update(|cx| AppState::global(cx).agent_service().cloned())
+                .ok()
+                .flatten();
+
+            if let Some(agent_service) = agent_service {
+                // List all sessions to find the agent name
+                let sessions = agent_service.list_sessions();
+                if let Some(session_info) = sessions.iter().find(|s| s.session_id == session_id) {
+                    let agent_name = session_info.agent_name.clone();
+
+                    // Cancel the session
+                    match agent_service.cancel_session(&agent_name, &session_id).await {
+                        Ok(()) => {
+                            log::info!("Session {} cancelled successfully", session_id);
+                        }
+                        Err(e) => {
+                            log::error!("Failed to cancel session {}: {}", session_id, e);
+                        }
+                    }
+                } else {
+                    log::error!("Session {} not found", session_id);
+                }
+            } else {
+                log::error!("AgentService not available");
+            }
+        })
+        .detach();
+    }
 }
+
+// ============================================================================
+// Agent Configuration Action Handlers
+// ============================================================================
+
+pub fn add_agent(action: &AddAgent, cx: &mut App) {
+    let agent_config_service = match AppState::global(cx).agent_config_service() {
+        Some(service) => service.clone(),
+        None => {
+            log::error!("AgentConfigService not initialized");
+            return;
+        }
+    };
+
+    let name = action.name.clone();
+    let config = crate::core::config::AgentProcessConfig {
+        command: action.command.clone(),
+        args: action.args.clone(),
+        env: action.env.clone(),
+    };
+
+    let _ = cx.spawn(async move |_cx| {
+        match agent_config_service.add_agent(name.clone(), config).await {
+            Ok(()) => {
+                log::info!("Successfully added agent: {}", name);
+            }
+            Err(e) => {
+                log::error!("Failed to add agent '{}': {}", name, e);
+            }
+        }
+    })
+    .detach();
+}
+
+pub fn update_agent(action: &UpdateAgent, cx: &mut App) {
+    let agent_config_service = match AppState::global(cx).agent_config_service() {
+        Some(service) => service.clone(),
+        None => {
+            log::error!("AgentConfigService not initialized");
+            return;
+        }
+    };
+
+    let name = action.name.clone();
+    let config = crate::core::config::AgentProcessConfig {
+        command: action.command.clone(),
+        args: action.args.clone(),
+        env: action.env.clone(),
+    };
+
+    let _ = cx.spawn(async move |_cx| {
+        match agent_config_service.update_agent(&name, config).await {
+            Ok(()) => {
+                log::info!("Successfully updated agent: {}", name);
+            }
+            Err(e) => {
+                log::error!("Failed to update agent '{}': {}", name, e);
+            }
+        }
+    })
+    .detach();
+}
+
+pub fn remove_agent(action: &RemoveAgent, cx: &mut App) {
+    let agent_config_service = match AppState::global(cx).agent_config_service() {
+        Some(service) => service.clone(),
+        None => {
+            log::error!("AgentConfigService not initialized");
+            return;
+        }
+    };
+
+    let name = action.name.clone();
+    let _ = cx.spawn(async move |_cx| {
+        // Check if agent has active sessions
+        if agent_config_service.has_active_sessions(&name).await {
+            log::warn!("Agent '{}' has active sessions. User should confirm removal.", name);
+            // In a full implementation, we'd show a confirmation dialog here
+            // For now, we'll proceed with removal
+        }
+
+        match agent_config_service.remove_agent(&name).await {
+            Ok(()) => {
+                log::info!("Successfully removed agent: {}", name);
+            }
+            Err(e) => {
+                log::error!("Failed to remove agent '{}': {}", name, e);
+            }
+        }
+    })
+    .detach();
+}
+
+pub fn restart_agent(action: &RestartAgent, cx: &mut App) {
+    let agent_config_service = match AppState::global(cx).agent_config_service() {
+        Some(service) => service.clone(),
+        None => {
+            log::error!("AgentConfigService not initialized");
+            return;
+        }
+    };
+
+    let name = action.name.clone();
+
+    let _ = cx.spawn(async move |_cx| {
+        match agent_config_service.restart_agent(&name).await {
+            Ok(()) => {
+                log::info!("Successfully restarted agent: {}", name);
+            }
+            Err(e) => {
+                log::error!("Failed to restart agent '{}': {}", name, e);
+            }
+        }
+    })
+    .detach();
+}
+
+pub fn reload_agent_config(_action: &ReloadAgentConfig, cx: &mut App) {
+    let agent_config_service = match AppState::global(cx).agent_config_service() {
+        Some(service) => service.clone(),
+        None => {
+            log::error!("AgentConfigService not initialized");
+            return;
+        }
+    };
+
+   let _ = cx.spawn(async move |_cx| {
+        match agent_config_service.reload_from_file().await {
+            Ok(()) => {
+                log::info!("Successfully reloaded agent configuration");
+            }
+            Err(e) => {
+                log::error!("Failed to reload agent configuration: {}", e);
+            }
+        }
+    })
+    .detach();
+}
+
+pub fn set_upload_dir(action: &SetUploadDir, cx: &mut App) {
+    let agent_config_service = match AppState::global(cx).agent_config_service() {
+        Some(service) => service.clone(),
+        None => {
+            log::error!("AgentConfigService not initialized");
+            return;
+        }
+    };
+
+    let path = action.path.clone();
+
+    let _ = cx.spawn(async move |_cx| {
+        match agent_config_service.set_upload_dir(path.clone()).await {
+            Ok(()) => {
+                log::info!("Successfully set upload directory to: {:?}", path);
+            }
+            Err(e) => {
+                log::error!("Failed to set upload directory: {}", e);
+            }
+        }
+    })
+    .detach();
+}
+

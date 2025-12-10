@@ -65,20 +65,30 @@ impl SessionManagerPanel {
             }
         };
 
-        // Get all agents
-        let agents = agent_service.list_agents();
+        let weak_self = cx.entity().downgrade();
+        cx.spawn(async move |_entity, mut cx| {
+            // Get all agents
+            let agents = agent_service.list_agents().await;
 
-        // Group sessions by agent
-        let mut sessions_by_agent = Vec::new();
-        for agent_name in agents {
-            let sessions = agent_service.list_sessions_for_agent(&agent_name);
-            if !sessions.is_empty() {
-                sessions_by_agent.push((agent_name, sessions));
+            // Group sessions by agent
+            let mut sessions_by_agent = Vec::new();
+            for agent_name in agents {
+                let sessions = agent_service.list_sessions_for_agent(&agent_name);
+                if !sessions.is_empty() {
+                    sessions_by_agent.push((agent_name, sessions));
+                }
             }
-        }
 
-        self.sessions_by_agent = sessions_by_agent;
-        cx.notify();
+            _ = cx.update(|cx| {
+                if let Some(this) = weak_self.upgrade() {
+                    this.update(cx, |this, cx| {
+                        this.sessions_by_agent = sessions_by_agent;
+                        cx.notify();
+                    });
+                }
+            });
+        })
+        .detach();
     }
 
     /// Create a new session for the given agent

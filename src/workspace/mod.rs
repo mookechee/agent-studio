@@ -14,7 +14,7 @@ use crate::{
 };
 
 // Action handlers module
-mod actions;
+pub mod actions;
 
 const MAIN_DOCK_AREA: DockAreaTab = DockAreaTab {
     id: "main-dock",
@@ -387,6 +387,7 @@ impl Render for DockWorkspace {
             .on_action(cx.listener(Self::on_action_new_session_conversation_panel))
             .on_action(cx.listener(Self::on_action_create_task_from_welcome))
             .on_action(cx.listener(Self::on_action_send_message_to_session))
+            .on_action(cx.listener(Self::on_action_cancel_session))
             .on_action(cx.listener(Self::on_action_open))
             .on_action(cx.listener(Self::paste))
             .relative()

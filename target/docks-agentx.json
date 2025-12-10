@@ -26,7 +26,7 @@
     "info": {
       "stack": {
         "sizes": [
-          936.0
+          1100.6666
         ],
         "axis": 0
       }
@@ -59,7 +59,7 @@
       "info": {
         "stack": {
           "sizes": [
-            801.0
+            872.6667
           ],
           "axis": 1
         }
@@ -121,15 +121,6 @@
                   "story_klass": "SessionManagerPanel"
                 }
               }
-            },
-            {
-              "panel_name": "DockPanelContainer",
-              "children": [],
-              "info": {
-                "panel": {
-                  "story_klass": "ConversationPanel"
-                }
-              }
             }
           ],
           "info": {
@@ -142,7 +133,7 @@
       "info": {
         "stack": {
           "sizes": [
-            29.0
+            200.0
           ],
           "axis": 1
         }
@@ -150,6 +141,6 @@
     },
     "placement": "bottom",
     "size": 200.0,
-    "open": false
+    "open": true
   }
 }
