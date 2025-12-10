@@ -376,3 +376,13 @@ pub struct SetUploadDir {
     pub path: std::path::PathBuf,
 }
 
+/// 更改配置文件路径
+///
+/// 修改当前使用的配置文件路径并重新加载配置
+#[derive(Action, Clone, PartialEq, Eq, Deserialize)]
+#[action(namespace = agent_config, no_json)]
+pub struct ChangeConfigPath {
+    /// Config file path / 配置文件路径
+    pub path: std::path::PathBuf,
+}
+

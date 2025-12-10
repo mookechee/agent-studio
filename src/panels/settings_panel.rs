@@ -19,11 +19,11 @@ use gpui_component::{
 };
 
 use crate::{
-    app::actions::{AddAgent, RemoveAgent, RestartAgent, UpdateAgent},
+    app::actions::{AddAgent, ChangeConfigPath, RemoveAgent, ReloadAgentConfig, RestartAgent, UpdateAgent},
     core::{config::AgentProcessConfig, updater::{UpdateCheckResult, UpdateManager, Version}},
     AppState,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 struct AppSettings {
     auto_switch_theme: bool,
@@ -85,6 +85,7 @@ pub struct SettingsPanel {
     // Agent configuration state
     agent_configs: HashMap<String, AgentProcessConfig>,
     upload_dir: String,
+    config_path: String,
 }
 
 struct OpenURLSettingField {
@@ -144,6 +145,7 @@ impl SettingsPanel {
         // Initialize with empty state - will be loaded async
         let agent_configs = HashMap::new();
         let upload_dir = String::new();
+        let config_path = String::new();
 
         let panel = Self {
             focus_handle: cx.focus_handle(),
@@ -153,6 +155,7 @@ impl SettingsPanel {
             update_manager: UpdateManager::default(),
             agent_configs,
             upload_dir,
+            config_path,
         };
 
         // Load agent configs asynchronously
@@ -174,6 +177,33 @@ impl SettingsPanel {
                 });
             }).detach();
         }
+
+        // Load config path from AppState
+        let config_path = AppState::global(cx)
+            .agent_config_service()
+            .and_then(|_| {
+                // Get config path from Settings or default
+                Some(
+                    std::env::current_dir()
+                        .ok()?
+                        .join("config.json")
+                        .to_string_lossy()
+                        .to_string()
+                )
+            })
+            .unwrap_or_default();
+
+        let weak_entity_path = cx.entity().downgrade();
+        cx.spawn_in(window, async move |_this, window| {
+            _ = window.update(|_window, cx| {
+                if let Some(entity) = weak_entity_path.upgrade() {
+                    entity.update(cx, |this, cx| {
+                        this.config_path = config_path;
+                        cx.notify();
+                    });
+                }
+            });
+        }).detach();
 
         // Subscribe to AgentConfigBus for dynamic updates
         let agent_config_bus = AppState::global(cx).agent_config_bus.clone();
@@ -432,6 +462,34 @@ impl SettingsPanel {
                         )
                 )
         });
+    }
+
+    /// Show file picker to select config file
+    fn show_config_file_picker(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+        let weak_entity = cx.entity().downgrade();
+
+        // Use rfd to open file dialog
+        cx.spawn(async move |_this, cx| {
+            let task = rfd::AsyncFileDialog::new()
+                .set_title("Select Config File")
+                .add_filter("JSON", &["json"])
+                .set_file_name("config.json")
+                .pick_file();
+
+            if let Some(file) = task.await {
+                let path = file.path().to_path_buf();
+                log::info!("Selected config file: {:?}", path);
+
+                // Dispatch action to change config path
+                _ = cx.update(|cx| {
+                    if let Some(entity) = weak_entity.upgrade() {
+                        entity.update(cx, |this, cx| {
+                            cx.dispatch_action(&ChangeConfigPath { path });
+                        });
+                    }
+                });
+            }
+        }).detach();
     }
 
     /// Handle agent configuration events
@@ -883,7 +941,65 @@ impl SettingsPanel {
                 .groups(vec![
                     SettingGroup::new()
                         .title("Configuration")
-                        .item(
+                        .items(vec![
+                            SettingItem::new(
+                                "Config File Path",
+                                SettingField::render({
+                                    let view = view.clone();
+                                    move |_options, _window, cx| {
+                                        let config_path = view.read(cx).config_path.clone();
+                                        let display = if config_path.is_empty() {
+                                            "Not configured".to_string()
+                                        } else {
+                                            config_path
+                                        };
+
+                                        h_flex()
+                                            .w_full()
+                                            .gap_2()
+                                            .items_center()
+                                            .child(
+                                                gpui::div()
+                                                    .flex_1()
+                                                    .child(
+                                                        Label::new(display)
+                                                            .text_sm()
+                                                            .text_color(cx.theme().muted_foreground)
+                                                    )
+                                            )
+                                            .child(
+                                                Button::new("browse-config")
+                                                    .label("Browse...")
+                                                    .icon(IconName::Folder)
+                                                    .outline()
+                                                    .small()
+                                                    .on_click({
+                                                        let view = view.clone();
+                                                        move |_, window, cx| {
+                                                            view.update(cx, |this, cx| {
+                                                                this.show_config_file_picker(window, cx);
+                                                            });
+                                                        }
+                                                    })
+                                            )
+                                            .child(
+                                                Button::new("reload-config")
+                                                    .label("Reload")
+                                                    .icon(IconName::LoaderCircle)
+                                                    .outline()
+                                                    .small()
+                                                    .on_click(move |_, window, cx| {
+                                                        window.dispatch_action(
+                                                            Box::new(ReloadAgentConfig),
+                                                            cx
+                                                        );
+                                                    })
+                                            )
+                                            .into_any()
+                                    }
+                                }),
+                            )
+                            .description("Path to agent configuration file (config.json)"),
                             SettingItem::new(
                                 "Upload Directory",
                                 SettingField::render({
@@ -907,7 +1023,7 @@ impl SettingsPanel {
                                 }),
                             )
                             .description("Directory for uploaded files (edit via config.json)"),
-                        ),
+                        ]),
                     SettingGroup::new()
                         .title("Configured Agents")
                         .item(SettingItem::render({

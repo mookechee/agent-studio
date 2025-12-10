@@ -209,6 +209,7 @@ pub fn init(cx: &mut App) {
     cx.on_action(workspace::actions::restart_agent);
     cx.on_action(workspace::actions::reload_agent_config);
     cx.on_action(workspace::actions::set_upload_dir);
+    cx.on_action(workspace::actions::change_config_path);
 
     register_panel(cx, PANEL_NAME, |_, _, info, window, cx| {
         let story_state = match info {

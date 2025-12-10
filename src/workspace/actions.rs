@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::{
     app::actions::{
-        AddAgent, CancelSession, ReloadAgentConfig, RemoveAgent, RestartAgent, SetUploadDir, Submit,
+        AddAgent, CancelSession, ChangeConfigPath, ReloadAgentConfig, RemoveAgent, RestartAgent, SetUploadDir, Submit,
         UpdateAgent,
     },
     panels::{dock_panel::DockPanelContainer, DockPanel},
@@ -755,4 +755,57 @@ pub fn set_upload_dir(action: &SetUploadDir, cx: &mut App) {
     })
     .detach();
 }
+
+pub fn change_config_path(action: &ChangeConfigPath, cx: &mut App) {
+    let new_path = action.path.clone();
+
+    // Validate that the file exists
+    if !new_path.exists() {
+        log::error!("Config file does not exist: {:?}", new_path);
+        return;
+    }
+
+    // Read and validate the config file
+    let config_result = std::fs::read_to_string(&new_path);
+    match config_result {
+        Ok(json) => {
+            // Try to parse as Config to validate format
+            match serde_json::from_str::<crate::core::config::Config>(&json) {
+                Ok(_config) => {
+                    log::info!("Config file validated successfully: {:?}", new_path);
+
+                    // Update config path in AppState
+                    AppState::global_mut(cx).set_config_path(new_path.clone());
+
+                    // Reload the configuration from the new file
+                    // Note: This requires restarting the application or reinitializing AgentConfigService
+                    // For now, we'll just log a message asking the user to restart
+                    log::warn!("Config path changed to: {:?}. Please restart the application to apply changes.", new_path);
+
+                    // Alternatively, trigger a reload if the service supports it
+                    if let Some(service) = AppState::global(cx).agent_config_service() {
+                        let service = service.clone();
+                        cx.spawn(async move |_cx| {
+                            match service.reload_from_file().await {
+                                Ok(()) => {
+                                    log::info!("Successfully reloaded configuration from new file");
+                                }
+                                Err(e) => {
+                                    log::error!("Failed to reload configuration: {}", e);
+                                }
+                            }
+                        }).detach();
+                    }
+                }
+                Err(e) => {
+                    log::error!("Invalid config file format: {}", e);
+                }
+            }
+        }
+        Err(e) => {
+            log::error!("Failed to read config file: {}", e);
+        }
+    }
+}
+
 
