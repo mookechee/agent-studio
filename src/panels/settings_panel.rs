@@ -1,9 +1,10 @@
 use gpui::{
-    px, App, AppContext, Axis, Context, Element, Entity, FocusHandle, Focusable, Global,
-    IntoElement, ParentElement as _, Render, SharedString, Styled, Window,
+    App, AppContext, Axis, Context, Element, Entity, FocusHandle, Focusable, Global, IntoElement,
+    ParentElement as _, Render, SharedString, Styled, Window, px,
 };
 
 use gpui_component::{
+    ActiveTheme, Icon, IconName, Sizable, Size, Theme, ThemeMode, WindowExt as _,
     button::Button,
     dialog::DialogButtonProps,
     group_box::GroupBoxVariant,
@@ -15,13 +16,18 @@ use gpui_component::{
         SettingItem, SettingPage, Settings,
     },
     text::TextView,
-    v_flex, ActiveTheme, Icon, IconName, Sizable, Size, Theme, ThemeMode, WindowExt as _,
+    v_flex,
 };
 
 use crate::{
-    app::actions::{AddAgent, ChangeConfigPath, RemoveAgent, ReloadAgentConfig, RestartAgent, UpdateAgent},
-    core::{config::AgentProcessConfig, updater::{UpdateCheckResult, UpdateManager, Version}},
     AppState,
+    app::actions::{
+        AddAgent, ChangeConfigPath, ReloadAgentConfig, RemoveAgent, RestartAgent, UpdateAgent,
+    },
+    core::{
+        config::AgentProcessConfig,
+        updater::{UpdateCheckResult, UpdateManager, Version},
+    },
 };
 use std::{collections::HashMap, path::PathBuf};
 
@@ -175,7 +181,8 @@ impl SettingsPanel {
                         });
                     }
                 });
-            }).detach();
+            })
+            .detach();
         }
 
         // Load config path from AppState
@@ -188,7 +195,7 @@ impl SettingsPanel {
                         .ok()?
                         .join("config.json")
                         .to_string_lossy()
-                        .to_string()
+                        .to_string(),
                 )
             })
             .unwrap_or_default();
@@ -203,7 +210,8 @@ impl SettingsPanel {
                     });
                 }
             });
-        }).detach();
+        })
+        .detach();
 
         // Subscribe to AgentConfigBus for dynamic updates
         let agent_config_bus = AppState::global(cx).agent_config_bus.clone();
@@ -247,13 +255,14 @@ impl SettingsPanel {
         };
 
         // Get existing config if editing
-        let existing_config = agent_name.as_ref().and_then(|name| {
-            self.agent_configs.get(name).cloned()
-        });
+        let existing_config = agent_name
+            .as_ref()
+            .and_then(|name| self.agent_configs.get(name).cloned());
 
         // Create input states
         let name_input = cx.new(|cx| {
-            let mut state = InputState::new(window, cx).placeholder("Agent name (e.g., Claude Code)");
+            let mut state =
+                InputState::new(window, cx).placeholder("Agent name (e.g., Claude Code)");
             if let Some(name) = &agent_name {
                 state.set_value(name.clone(), window, cx);
             }
@@ -261,7 +270,8 @@ impl SettingsPanel {
         });
 
         let command_input = cx.new(|cx| {
-            let mut state = InputState::new(window, cx).placeholder("Command (e.g., claude-code-acp)");
+            let mut state =
+                InputState::new(window, cx).placeholder("Command (e.g., claude-code-acp)");
             if let Some(config) = &existing_config {
                 state.set_value(config.command.clone(), window, cx);
             }
@@ -281,7 +291,9 @@ impl SettingsPanel {
             let mut state = InputState::new(window, cx)
                 .placeholder("Environment variables (KEY=VALUE, one per line)");
             if let Some(config) = &existing_config {
-                let env_text = config.env.iter()
+                let env_text = config
+                    .env
+                    .iter()
                     .map(|(k, v)| format!("{}={}", k, v))
                     .collect::<Vec<_>>()
                     .join("\n");
@@ -297,7 +309,7 @@ impl SettingsPanel {
                 .button_props(
                     DialogButtonProps::default()
                         .ok_text(if is_edit { "Update" } else { "Add" })
-                        .cancel_text("Cancel")
+                        .cancel_text("Cancel"),
                 )
                 .on_ok({
                     let name_input = name_input.clone();
@@ -315,7 +327,7 @@ impl SettingsPanel {
                         // Validate inputs
                         if name.is_empty() {
                             log::warn!("Agent name cannot be empty");
-                            return false;  // Don't close dialog
+                            return false; // Don't close dialog
                         }
 
                         if command.is_empty() {
@@ -353,7 +365,7 @@ impl SettingsPanel {
                                     args,
                                     env,
                                 }),
-                                cx
+                                cx,
                             );
                         } else {
                             window.dispatch_action(
@@ -363,11 +375,11 @@ impl SettingsPanel {
                                     args,
                                     env,
                                 }),
-                                cx
+                                cx,
                             );
                         }
 
-                        true  // Close dialog
+                        true // Close dialog
                     }
                 })
                 .child(
@@ -378,40 +390,55 @@ impl SettingsPanel {
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Agent Name").text_sm().font_weight(gpui::FontWeight::SEMIBOLD))
                                 .child(
-                                    Input::new(&name_input)
-                                        .disabled(is_edit)  // Can't change name when editing
+                                    Label::new("Agent Name")
+                                        .text_sm()
+                                        .font_weight(gpui::FontWeight::SEMIBOLD),
                                 )
+                                .child(
+                                    Input::new(&name_input).disabled(is_edit), // Can't change name when editing
+                                ),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Command").text_sm().font_weight(gpui::FontWeight::SEMIBOLD))
+                                .child(
+                                    Label::new("Command")
+                                        .text_sm()
+                                        .font_weight(gpui::FontWeight::SEMIBOLD),
+                                )
                                 .child(Input::new(&command_input))
                                 .child(
                                     Label::new("Full path or command name in PATH")
                                         .text_xs()
-                                        .text_color(cx.theme().muted_foreground)
+                                        .text_color(cx.theme().muted_foreground),
+                                ),
+                        )
+                        .child(
+                            v_flex()
+                                .gap_2()
+                                .child(
+                                    Label::new("Arguments (optional)")
+                                        .text_sm()
+                                        .font_weight(gpui::FontWeight::SEMIBOLD),
                                 )
+                                .child(Input::new(&args_input)),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Arguments (optional)").text_sm().font_weight(gpui::FontWeight::SEMIBOLD))
-                                .child(Input::new(&args_input))
-                        )
-                        .child(
-                            v_flex()
-                                .gap_2()
-                                .child(Label::new("Environment Variables (optional)").text_sm().font_weight(gpui::FontWeight::SEMIBOLD))
+                                .child(
+                                    Label::new("Environment Variables (optional)")
+                                        .text_sm()
+                                        .font_weight(gpui::FontWeight::SEMIBOLD),
+                                )
                                 .child(Input::new(&env_input))
                                 .child(
                                     Label::new("One per line, format: KEY=VALUE")
                                         .text_xs()
-                                        .text_color(cx.theme().muted_foreground)
-                                )
-                        )
+                                        .text_color(cx.theme().muted_foreground),
+                                ),
+                        ),
                 )
         });
     }
@@ -489,7 +516,8 @@ impl SettingsPanel {
                     }
                 });
             }
-        }).detach();
+        })
+        .detach();
     }
 
     /// Handle agent configuration events
@@ -520,7 +548,8 @@ impl SettingsPanel {
                         });
                     }
                 });
-            }).detach();
+            })
+            .detach();
         }
     }
 

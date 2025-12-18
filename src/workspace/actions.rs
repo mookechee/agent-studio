@@ -4,15 +4,16 @@ use gpui_component::dock::{DockItem, DockPlacement};
 use std::sync::Arc;
 
 use crate::{
+    AddPanel, AppState, ConversationPanel, CreateTaskFromWelcome, NewSessionConversationPanel,
+    SendMessageToSession, SettingsPanel, ShowConversationPanel, ShowToolCallDetail,
+    ShowWelcomePanel, ToggleDockToggleButton, TogglePanelVisible, WelcomePanel,
     app::actions::{
-        AddAgent, CancelSession, ChangeConfigPath, ReloadAgentConfig, RemoveAgent, RestartAgent, SetUploadDir, Submit,
-        UpdateAgent,
+        AddAgent, CancelSession, ChangeConfigPath, ReloadAgentConfig, RemoveAgent, RestartAgent,
+        SetUploadDir, Submit, UpdateAgent,
     },
-    panels::{dock_panel::DockPanelContainer, DockPanel},
+    panels::{DockPanel, dock_panel::DockPanelContainer},
     title_bar::OpenSettings,
-    utils, AddPanel, AppState, ConversationPanel, CreateTaskFromWelcome,
-    NewSessionConversationPanel, SendMessageToSession, SettingsPanel, ShowConversationPanel,
-    ShowToolCallDetail, ShowWelcomePanel, ToggleDockToggleButton, TogglePanelVisible, WelcomePanel,
+    utils,
 };
 
 use super::DockWorkspace;
@@ -554,11 +555,17 @@ impl DockWorkspace {
     ) {
         let session_id = action.session_id.clone();
 
-        log::info!("DockWorkspace: Received CancelSession action for session: {}", session_id);
+        log::info!(
+            "DockWorkspace: Received CancelSession action for session: {}",
+            session_id
+        );
 
         // Spawn async task to cancel the session
         cx.spawn(async move |_this, cx| {
-            log::info!("DockWorkspace: Starting async cancel task for session: {}", session_id);
+            log::info!(
+                "DockWorkspace: Starting async cancel task for session: {}",
+                session_id
+            );
 
             // Get AgentService to find which agent owns this session
             let agent_service = cx
@@ -575,15 +582,26 @@ impl DockWorkspace {
 
                 if let Some(session_info) = sessions.iter().find(|s| s.session_id == session_id) {
                     let agent_name = session_info.agent_name.clone();
-                    log::info!("DockWorkspace: Found session {} belongs to agent: {}", session_id, agent_name);
+                    log::info!(
+                        "DockWorkspace: Found session {} belongs to agent: {}",
+                        session_id,
+                        agent_name
+                    );
 
                     // Cancel the session
                     match agent_service.cancel_session(&agent_name, &session_id).await {
                         Ok(()) => {
-                            log::info!("DockWorkspace: Session {} cancelled successfully", session_id);
+                            log::info!(
+                                "DockWorkspace: Session {} cancelled successfully",
+                                session_id
+                            );
                         }
                         Err(e) => {
-                            log::error!("DockWorkspace: Failed to cancel session {}: {}", session_id, e);
+                            log::error!(
+                                "DockWorkspace: Failed to cancel session {}: {}",
+                                session_id,
+                                e
+                            );
                         }
                     }
                 } else {
@@ -617,17 +635,18 @@ pub fn add_agent(action: &AddAgent, cx: &mut App) {
         env: action.env.clone(),
     };
 
-    let _ = cx.spawn(async move |_cx| {
-        match agent_config_service.add_agent(name.clone(), config).await {
-            Ok(()) => {
-                log::info!("Successfully added agent: {}", name);
-            }
-            Err(e) => {
-                log::error!("Failed to add agent '{}': {}", name, e);
-            }
-        }
-    })
-    .detach();
+    let _ = cx
+        .spawn(
+            async move |_cx| match agent_config_service.add_agent(name.clone(), config).await {
+                Ok(()) => {
+                    log::info!("Successfully added agent: {}", name);
+                }
+                Err(e) => {
+                    log::error!("Failed to add agent '{}': {}", name, e);
+                }
+            },
+        )
+        .detach();
 }
 
 pub fn update_agent(action: &UpdateAgent, cx: &mut App) {
@@ -646,17 +665,18 @@ pub fn update_agent(action: &UpdateAgent, cx: &mut App) {
         env: action.env.clone(),
     };
 
-    let _ = cx.spawn(async move |_cx| {
-        match agent_config_service.update_agent(&name, config).await {
-            Ok(()) => {
-                log::info!("Successfully updated agent: {}", name);
-            }
-            Err(e) => {
-                log::error!("Failed to update agent '{}': {}", name, e);
-            }
-        }
-    })
-    .detach();
+    let _ = cx
+        .spawn(
+            async move |_cx| match agent_config_service.update_agent(&name, config).await {
+                Ok(()) => {
+                    log::info!("Successfully updated agent: {}", name);
+                }
+                Err(e) => {
+                    log::error!("Failed to update agent '{}': {}", name, e);
+                }
+            },
+        )
+        .detach();
 }
 
 pub fn remove_agent(action: &RemoveAgent, cx: &mut App) {
@@ -669,24 +689,28 @@ pub fn remove_agent(action: &RemoveAgent, cx: &mut App) {
     };
 
     let name = action.name.clone();
-    let _ = cx.spawn(async move |_cx| {
-        // Check if agent has active sessions
-        if agent_config_service.has_active_sessions(&name).await {
-            log::warn!("Agent '{}' has active sessions. User should confirm removal.", name);
-            // In a full implementation, we'd show a confirmation dialog here
-            // For now, we'll proceed with removal
-        }
+    let _ = cx
+        .spawn(async move |_cx| {
+            // Check if agent has active sessions
+            if agent_config_service.has_active_sessions(&name).await {
+                log::warn!(
+                    "Agent '{}' has active sessions. User should confirm removal.",
+                    name
+                );
+                // In a full implementation, we'd show a confirmation dialog here
+                // For now, we'll proceed with removal
+            }
 
-        match agent_config_service.remove_agent(&name).await {
-            Ok(()) => {
-                log::info!("Successfully removed agent: {}", name);
+            match agent_config_service.remove_agent(&name).await {
+                Ok(()) => {
+                    log::info!("Successfully removed agent: {}", name);
+                }
+                Err(e) => {
+                    log::error!("Failed to remove agent '{}': {}", name, e);
+                }
             }
-            Err(e) => {
-                log::error!("Failed to remove agent '{}': {}", name, e);
-            }
-        }
-    })
-    .detach();
+        })
+        .detach();
 }
 
 pub fn restart_agent(action: &RestartAgent, cx: &mut App) {
@@ -700,17 +724,18 @@ pub fn restart_agent(action: &RestartAgent, cx: &mut App) {
 
     let name = action.name.clone();
 
-    let _ = cx.spawn(async move |_cx| {
-        match agent_config_service.restart_agent(&name).await {
-            Ok(()) => {
-                log::info!("Successfully restarted agent: {}", name);
-            }
-            Err(e) => {
-                log::error!("Failed to restart agent '{}': {}", name, e);
-            }
-        }
-    })
-    .detach();
+    let _ = cx
+        .spawn(
+            async move |_cx| match agent_config_service.restart_agent(&name).await {
+                Ok(()) => {
+                    log::info!("Successfully restarted agent: {}", name);
+                }
+                Err(e) => {
+                    log::error!("Failed to restart agent '{}': {}", name, e);
+                }
+            },
+        )
+        .detach();
 }
 
 pub fn reload_agent_config(_action: &ReloadAgentConfig, cx: &mut App) {
@@ -722,17 +747,18 @@ pub fn reload_agent_config(_action: &ReloadAgentConfig, cx: &mut App) {
         }
     };
 
-   let _ = cx.spawn(async move |_cx| {
-        match agent_config_service.reload_from_file().await {
-            Ok(()) => {
-                log::info!("Successfully reloaded agent configuration");
-            }
-            Err(e) => {
-                log::error!("Failed to reload agent configuration: {}", e);
-            }
-        }
-    })
-    .detach();
+    let _ = cx
+        .spawn(
+            async move |_cx| match agent_config_service.reload_from_file().await {
+                Ok(()) => {
+                    log::info!("Successfully reloaded agent configuration");
+                }
+                Err(e) => {
+                    log::error!("Failed to reload agent configuration: {}", e);
+                }
+            },
+        )
+        .detach();
 }
 
 pub fn set_upload_dir(action: &SetUploadDir, cx: &mut App) {
@@ -746,17 +772,18 @@ pub fn set_upload_dir(action: &SetUploadDir, cx: &mut App) {
 
     let path = action.path.clone();
 
-    let _ = cx.spawn(async move |_cx| {
-        match agent_config_service.set_upload_dir(path.clone()).await {
-            Ok(()) => {
-                log::info!("Successfully set upload directory to: {:?}", path);
-            }
-            Err(e) => {
-                log::error!("Failed to set upload directory: {}", e);
-            }
-        }
-    })
-    .detach();
+    let _ = cx
+        .spawn(
+            async move |_cx| match agent_config_service.set_upload_dir(path.clone()).await {
+                Ok(()) => {
+                    log::info!("Successfully set upload directory to: {:?}", path);
+                }
+                Err(e) => {
+                    log::error!("Failed to set upload directory: {}", e);
+                }
+            },
+        )
+        .detach();
 }
 
 pub fn change_config_path(action: &ChangeConfigPath, cx: &mut App) {
@@ -783,21 +810,23 @@ pub fn change_config_path(action: &ChangeConfigPath, cx: &mut App) {
                     // Reload the configuration from the new file
                     // Note: This requires restarting the application or reinitializing AgentConfigService
                     // For now, we'll just log a message asking the user to restart
-                    log::warn!("Config path changed to: {:?}. Please restart the application to apply changes.", new_path);
+                    log::warn!(
+                        "Config path changed to: {:?}. Please restart the application to apply changes.",
+                        new_path
+                    );
 
                     // Alternatively, trigger a reload if the service supports it
                     if let Some(service) = AppState::global(cx).agent_config_service() {
                         let service = service.clone();
-                        cx.spawn(async move |_cx| {
-                            match service.reload_from_file().await {
-                                Ok(()) => {
-                                    log::info!("Successfully reloaded configuration from new file");
-                                }
-                                Err(e) => {
-                                    log::error!("Failed to reload configuration: {}", e);
-                                }
+                        cx.spawn(async move |_cx| match service.reload_from_file().await {
+                            Ok(()) => {
+                                log::info!("Successfully reloaded configuration from new file");
                             }
-                        }).detach();
+                            Err(e) => {
+                                log::error!("Failed to reload configuration: {}", e);
+                            }
+                        })
+                        .detach();
                     }
                 }
                 Err(e) => {
@@ -810,5 +839,3 @@ pub fn change_config_path(action: &ChangeConfigPath, cx: &mut App) {
         }
     }
 }
-
-

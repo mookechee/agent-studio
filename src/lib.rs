@@ -44,8 +44,8 @@ pub use app::{
     app_menus, menu, themes, title_bar,
 };
 use gpui::{
-    div, px, size, AnyView, App, AppContext, Bounds, Context, Entity, IntoElement, ParentElement,
-    Pixels, Render, SharedString, Size, Styled, Window, WindowBounds, WindowKind, WindowOptions,
+    AnyView, App, AppContext, Bounds, Context, Entity, IntoElement, ParentElement, Pixels, Render,
+    SharedString, Size, Styled, Window, WindowBounds, WindowKind, WindowOptions, div, px, size,
 };
 // Re-export from other modules
 pub use menu::UIMenu;
@@ -67,8 +67,9 @@ pub use agent_client_protocol::{
 };
 
 use gpui_component::{
-    dock::{register_panel, PanelControl, PanelInfo},
-    v_flex, Root, TitleBar,
+    Root, TitleBar,
+    dock::{PanelControl, PanelInfo, register_panel},
+    v_flex,
 };
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 

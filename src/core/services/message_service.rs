@@ -8,7 +8,7 @@ use std::sync::Arc;
 use agent_client_protocol::{
     ContentBlock, ContentChunk, ImageContent, PromptResponse, SessionUpdate, TextContent,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 use crate::core::event_bus::session_bus::{SessionUpdateBusContainer, SessionUpdateEvent};
 

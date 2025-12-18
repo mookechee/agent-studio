@@ -1,5 +1,5 @@
 use agentx::Assets;
-use agentx::{workspace::open_new, AgentManager, Config, PermissionStore, Settings};
+use agentx::{AgentManager, Config, PermissionStore, Settings, workspace::open_new};
 use anyhow::Context as _;
 use gpui::Application;
 use std::sync::Arc;
@@ -65,7 +65,8 @@ fn main() {
                     // Store in global AppState
                     let init_result = cx.update(|cx| {
                         // Set config path first
-                        agentx::AppState::global_mut(cx).set_config_path(settings.config_path.clone());
+                        agentx::AppState::global_mut(cx)
+                            .set_config_path(settings.config_path.clone());
                         // Then set agent manager with config
                         agentx::AppState::global_mut(cx).set_agent_manager(manager, config);
                         agentx::AppState::global_mut(cx).set_permission_store(permission_store);

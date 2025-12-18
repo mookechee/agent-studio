@@ -11,7 +11,7 @@ use std::{
 };
 
 use agent_client_protocol::{self as acp, PromptResponse};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -141,7 +141,11 @@ impl AgentService {
 
     /// Cancel an ongoing session operation
     pub async fn cancel_session(&self, agent_name: &str, session_id: &str) -> Result<()> {
-        log::info!("AgentService: cancel_session called for agent={}, session={}", agent_name, session_id);
+        log::info!(
+            "AgentService: cancel_session called for agent={}, session={}",
+            agent_name,
+            session_id
+        );
 
         // Get the agent handle
         let agent_handle = self.get_agent_handle(agent_name).await?;
@@ -156,7 +160,11 @@ impl AgentService {
         if let Some(agent_sessions) = sessions.get_mut(agent_name) {
             if let Some(info) = agent_sessions.get_mut(session_id) {
                 info.status = SessionStatus::Idle;
-                log::info!("AgentService: Updated session status to Idle for {} (agent: {})", session_id, agent_name);
+                log::info!(
+                    "AgentService: Updated session status to Idle for {} (agent: {})",
+                    session_id,
+                    agent_name
+                );
 
                 // Publish status update to workspace bus
                 if let Some(ref workspace_bus) = self.workspace_bus {
@@ -171,7 +179,11 @@ impl AgentService {
                     log::info!("AgentService: Published session status update to workspace bus");
                 }
             } else {
-                log::warn!("AgentService: Session {} not found in agent {}", session_id, agent_name);
+                log::warn!(
+                    "AgentService: Session {} not found in agent {}",
+                    session_id,
+                    agent_name
+                );
             }
         } else {
             log::warn!("AgentService: No sessions found for agent {}", agent_name);

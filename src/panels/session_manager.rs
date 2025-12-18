@@ -1,17 +1,18 @@
 use gpui::{
-    prelude::FluentBuilder, px, App, AppContext, Context, Entity, FocusHandle, Focusable,
-    IntoElement, ParentElement, Pixels, Render, Styled, Window,
+    App, AppContext, Context, Entity, FocusHandle, Focusable, IntoElement, ParentElement, Pixels,
+    Render, Styled, Window, prelude::FluentBuilder, px,
 };
 
 use gpui_component::{
+    ActiveTheme, Icon, IconName, Sizable,
     button::{Button, ButtonVariants},
-    h_flex, v_flex, ActiveTheme, Icon, IconName, Sizable,
+    h_flex, v_flex,
 };
 
 use crate::{
+    AppState,
     core::services::{AgentSessionInfo, SessionStatus},
     panels::dock_panel::DockPanel,
-    AppState,
 };
 
 /// Session Manager Panel - Displays and manages all agent sessions

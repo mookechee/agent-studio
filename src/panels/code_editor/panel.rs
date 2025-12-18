@@ -3,14 +3,15 @@ use std::{path::PathBuf, rc::Rc, str::FromStr};
 use autocorrect::ignorer::Ignorer;
 use gpui::{prelude::FluentBuilder, *};
 use gpui_component::{
+    ActiveTheme, IconName, Sizable, StyledExt, WindowExt,
     button::{Button, ButtonVariants as _},
     h_flex,
     highlighter::{Diagnostic, DiagnosticSeverity, Language},
     input::{Input, InputEvent, InputState, Position, RopeExt, TabSize},
     list::ListItem,
     resizable::{h_resizable, resizable_panel},
-    tree::{tree, TreeState},
-    v_flex, ActiveTheme, IconName, Sizable, StyledExt, WindowExt,
+    tree::{TreeState, tree},
+    v_flex,
 };
 use lsp_types::{CodeActionKind, TextEdit, WorkspaceEdit};
 

@@ -1,7 +1,13 @@
 use agent_client_protocol::ToolCall;
 use gpui::{prelude::FluentBuilder, *};
 use gpui_component::{
-    ActiveTheme, IconName, Sizable, WindowExt, button::{Button, ButtonVariants}, dock::{Panel, PanelControl, PanelEvent, PanelInfo, PanelState, TitleStyle}, group_box::{GroupBox, GroupBoxVariants as _}, h_flex, menu::PopupMenu, notification::Notification
+    ActiveTheme, IconName, Sizable, WindowExt,
+    button::{Button, ButtonVariants},
+    dock::{Panel, PanelControl, PanelEvent, PanelInfo, PanelState, TitleStyle},
+    group_box::{GroupBox, GroupBoxVariants as _},
+    h_flex,
+    menu::PopupMenu,
+    notification::Notification,
 };
 
 use serde::{Deserialize, Serialize};

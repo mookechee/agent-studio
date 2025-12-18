@@ -1,9 +1,9 @@
 use gpui::{
-    div, prelude::*, px, App, ClipboardEntry, Context, Entity, FocusHandle, Focusable, IntoElement,
-    ParentElement, Render, ScrollHandle, SharedString, Styled, Window,
+    App, ClipboardEntry, Context, Entity, FocusHandle, Focusable, IntoElement, ParentElement,
+    Render, ScrollHandle, SharedString, Styled, Window, div, prelude::*, px,
 };
 use gpui_component::{
-    h_flex, input::InputState, scroll::ScrollableElement, v_flex, ActiveTheme, Icon, IconName,
+    ActiveTheme, Icon, IconName, h_flex, input::InputState, scroll::ScrollableElement, v_flex,
 };
 
 // Use the published ACP schema crate
@@ -11,15 +11,15 @@ use agent_client_protocol::{ContentChunk, ImageContent, SessionUpdate, ToolCall}
 use chrono::{DateTime, Utc};
 
 use crate::{
-    app::actions::AddCodeSelection, core::services::SessionStatus, panels::dock_panel::DockPanel,
     AgentMessage, AgentTodoList, AppState, CancelSession, ChatInputBox, SendMessageToSession,
+    app::actions::AddCodeSelection, core::services::SessionStatus, panels::dock_panel::DockPanel,
 };
 
 // Import from submodules
 use super::{
     components::{ResourceItemState, ToolCallItemState, UserMessageView},
     helpers::{extract_text_from_content, get_element_id, session_update_type_name},
-    rendered_item::{create_agent_message_data, RenderedItem},
+    rendered_item::{RenderedItem, create_agent_message_data},
     types::ResourceInfo,
 };
 
@@ -873,11 +873,7 @@ impl ConversationPanel {
 
     /// Send a message to the current session
     /// Dispatches SendMessageToSession action to workspace for handling
-    fn send_cancel_message(
-        &self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    fn send_cancel_message(&self, window: &mut Window, cx: &mut Context<Self>) {
         // Only send if we have a session_id
         let Some(ref session_id) = self.session_id else {
             log::warn!("Cannot cancel session: no session_id");

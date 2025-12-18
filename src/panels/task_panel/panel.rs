@@ -6,18 +6,19 @@
 //! - Tree view (by workspace) and timeline view (by date)
 
 use gpui::{
-    App, AppContext, Context, Entity, FocusHandle, Focusable, InteractiveElement, IntoElement, MouseButton, MouseDownEvent, ParentElement, Pixels, Render, SharedString, StatefulInteractiveElement, Styled, Subscription, Task, Window, div, prelude::FluentBuilder, px
+    App, AppContext, Context, Entity, FocusHandle, Focusable, InteractiveElement, IntoElement, MouseButton, MouseDownEvent, ParentElement, Pixels, Render, SharedString, StatefulInteractiveElement, Styled, Subscription, Window, div, prelude::FluentBuilder, px
 };
 use gpui_component::{
     ActiveTheme, Icon, IconName, InteractiveElementExt, Selectable, Sizable, StyledExt, button::{Button, ButtonGroup, ButtonVariants}, h_flex, input::{Input, InputState}, menu::{ContextMenuExt, DropdownMenu, PopupMenuItem}, scroll::ScrollableElement as _, v_flex
 };
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::core::services::WorkspaceService;
 use crate::core::{event_bus::WorkspaceUpdateEvent, services::SessionStatus};
 use crate::panels::dock_panel::DockPanel;
 use crate::schemas::workspace_schema::WorkspaceTask;
-use crate::{utils, AppState, ShowConversationPanel, ShowWelcomePanel};
+use crate::{AppState, ShowConversationPanel, ShowWelcomePanel, utils};
 
 // ============================================================================
 // Constants - Layout spacing
@@ -56,6 +57,7 @@ pub struct TaskPanel {
     _subscriptions: Vec<Subscription>,
     /// Search input state
     search_input: Entity<InputState>,
+    load_generation: u64,
 }
 
 impl DockPanel for TaskPanel {
@@ -108,6 +110,7 @@ impl TaskPanel {
             view_mode: ViewMode::Tree,
             _subscriptions: vec![search_subscription],
             search_input,
+            load_generation: 0,
         }
     }
 
@@ -120,33 +123,55 @@ impl TaskPanel {
         workspace_service: std::sync::Arc<WorkspaceService>,
         cx: &mut App,
     ) {
+        let generation = entity.update(cx, |this, _| {
+            this.load_generation = this.load_generation.wrapping_add(1);
+            this.load_generation
+        });
+
         let entity_clone = entity.clone();
         cx.spawn(async move |cx| {
-            let workspaces_list = workspace_service.list_workspaces().await;
             let config = workspace_service.get_config().await;
+            let workspaces_list = config.workspaces;
+            let tasks = config.tasks;
+
+            let mut tasks_by_workspace: HashMap<String, Vec<Rc<WorkspaceTask>>> = HashMap::new();
+            for task in tasks {
+                tasks_by_workspace
+                    .entry(task.workspace_id.clone())
+                    .or_default()
+                    .push(Rc::new(task));
+            }
 
             cx.update(|cx| {
                 entity_clone.update(cx, |this, cx| {
+                    if this.load_generation != generation {
+                        return;
+                    }
+
+                    let previously_expanded: HashMap<String, bool> = this
+                        .workspaces
+                        .iter()
+                        .map(|w| (w.id.clone(), w.is_expanded))
+                        .collect();
+
                     this.workspaces = workspaces_list
                         .into_iter()
                         .map(|ws| {
-                            let tasks = config
-                                .tasks
-                                .iter()
-                                .filter(|t| t.workspace_id == ws.id)
-                                .map(|t| Rc::new(t.clone()))
-                                .collect();
+                            let tasks = tasks_by_workspace.remove(&ws.id).unwrap_or_default();
 
                             WorkspaceGroup {
                                 id: ws.id.clone(),
                                 name: ws.name.clone(),
                                 tasks,
-                                is_expanded: true,
+                                is_expanded: previously_expanded
+                                    .get(&ws.id)
+                                    .copied()
+                                    .unwrap_or(true),
                             }
                         })
                         .collect();
 
-                    this.select_first_task();
+                    this.ensure_selected_task_valid();
                     cx.notify();
                 });
             })
@@ -169,15 +194,12 @@ impl TaskPanel {
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
         // Subscribe to workspace bus
-        workspace_bus
-            .lock()
-            .unwrap()
-            .subscribe(move |event| {
-                let _ = tx.send(event.clone());
-            });
+        workspace_bus.lock().unwrap().subscribe(move |event| {
+            let _ = tx.send(event.clone());
+        });
 
         // Spawn task to process events and update UI
-        cx.spawn(async move |mut cx| {
+        cx.spawn(async move |cx| {
             while let Some(event) = rx.recv().await {
                 match event {
                     WorkspaceUpdateEvent::WorkspaceAdded { workspace_id } => {
@@ -185,7 +207,8 @@ impl TaskPanel {
                         if let Some(entity) = entity_weak.upgrade() {
                             cx.update(|cx| {
                                 Self::load_workspace_data(&entity, workspace_service.clone(), cx);
-                            }).ok();
+                            })
+                            .ok();
                         }
                     }
                     WorkspaceUpdateEvent::WorkspaceRemoved { workspace_id } => {
@@ -193,7 +216,8 @@ impl TaskPanel {
                         if let Some(entity) = entity_weak.upgrade() {
                             cx.update(|cx| {
                                 Self::load_workspace_data(&entity, workspace_service.clone(), cx);
-                            }).ok();
+                            })
+                            .ok();
                         }
                     }
                     WorkspaceUpdateEvent::TaskCreated {
@@ -209,7 +233,8 @@ impl TaskPanel {
                         if let Some(entity) = entity_weak.upgrade() {
                             cx.update(|cx| {
                                 Self::load_workspace_data(&entity, workspace_service.clone(), cx);
-                            }).ok();
+                            })
+                            .ok();
                         }
                     }
                     WorkspaceUpdateEvent::TaskUpdated { task_id } => {
@@ -217,12 +242,24 @@ impl TaskPanel {
                         if let Some(entity) = entity_weak.upgrade() {
                             cx.update(|cx| {
                                 Self::load_workspace_data(&entity, workspace_service.clone(), cx);
-                            }).ok();
+                            })
+                            .ok();
                         }
                     }
-                    WorkspaceUpdateEvent::SessionStatusUpdated { session_id, .. } => {
+                    WorkspaceUpdateEvent::SessionStatusUpdated {
+                        session_id, status, ..
+                    } => {
                         log::debug!("TaskPanel received SessionStatusUpdated: {}", session_id);
-                        // TaskPanel doesn't need to react to session status updates
+                        if let Some(entity) = entity_weak.upgrade() {
+                            let session_id = session_id.clone();
+                            let status = status.clone();
+                            cx.update(|cx| {
+                                entity.update(cx, |this, cx| {
+                                    this.update_task_status_by_session_id(&session_id, status, cx);
+                                });
+                            })
+                            .ok();
+                        }
                     }
                 }
             }
@@ -230,11 +267,53 @@ impl TaskPanel {
         .detach();
     }
 
-    fn select_first_task(&mut self) {
-        if let Some(first_workspace) = self.workspaces.first() {
-            if let Some(first_task) = first_workspace.tasks.first() {
-                self.selected_task_id = Some(first_task.id.clone());
+    fn ensure_selected_task_valid(&mut self) {
+        let selected_is_valid = self.selected_task_id.as_ref().is_some_and(|id| {
+            self.workspaces
+                .iter()
+                .flat_map(|w| w.tasks.iter())
+                .any(|t| &t.id == id)
+        });
+
+        if selected_is_valid {
+            return;
+        }
+
+        self.selected_task_id = self
+            .workspaces
+            .iter()
+            .flat_map(|w| w.tasks.iter())
+            .next()
+            .map(|t| t.id.clone());
+    }
+
+    fn update_task_status_by_session_id(
+        &mut self,
+        session_id: &str,
+        status: SessionStatus,
+        cx: &mut Context<Self>,
+    ) {
+        let mut updated = false;
+
+        for workspace in &mut self.workspaces {
+            for task in &mut workspace.tasks {
+                if task.session_id.as_deref() != Some(session_id) {
+                    continue;
+                }
+
+                if task.status == status {
+                    continue;
+                }
+
+                let mut updated_task = (**task).clone();
+                updated_task.status = status.clone();
+                *task = Rc::new(updated_task);
+                updated = true;
             }
+        }
+
+        if updated {
+            cx.notify();
         }
     }
 
@@ -281,6 +360,26 @@ impl TaskPanel {
                     }
                 }
             }
+        })
+        .detach();
+    }
+
+    fn refresh(&mut self, cx: &mut Context<Self>) {
+        let workspace_service = match AppState::global(cx).workspace_service() {
+            Some(service) => service.clone(),
+            None => {
+                log::warn!("WorkspaceService not available");
+                return;
+            }
+        };
+
+        cx.spawn(async move |entity, cx| {
+            cx.update(|cx| {
+                if let Some(entity_strong) = entity.upgrade() {
+                    Self::load_workspace_data(&entity_strong, workspace_service.clone(), cx);
+                }
+            })
+            .ok();
         })
         .detach();
     }
@@ -493,7 +592,10 @@ impl TaskPanel {
                         Button::new("refresh")
                             .ghost()
                             .small()
-                            .icon(Icon::new(crate::assets::Icon::FolderSync)),
+                            .icon(Icon::new(crate::assets::Icon::FolderSync))
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.refresh(cx);
+                            })),
                     )
                     .child(
                         Button::new("monitor")
@@ -604,19 +706,24 @@ impl TaskPanel {
                                 .ghost()
                                 .xsmall()
                                 .on_click(|_, _, cx| cx.stop_propagation())
-                                .dropdown_menu(move |menu, _, _| {
-                                    let workspace_id = workspace_id.clone();
-                                    let entity = entity.clone();
-                                    menu.item(
-                                        PopupMenuItem::new("移除工作区")
-                                            .icon(Icon::new(crate::assets::Icon::Trash2))
-                                            .on_click(move |_, _, cx| {
-                                                entity.update(cx, |this, cx| {
-                                                    this.remove_workspace(workspace_id.clone(), cx);
-                                                });
-                                            }),
-                                    )
-                                })
+                                .dropdown_menu(
+                                    move |menu, _, _| {
+                                        let workspace_id = workspace_id.clone();
+                                        let entity = entity.clone();
+                                        menu.item(
+                                            PopupMenuItem::new("移除工作区")
+                                                .icon(Icon::new(crate::assets::Icon::Trash2))
+                                                .on_click(move |_, _, cx| {
+                                                    entity.update(cx, |this, cx| {
+                                                        this.remove_workspace(
+                                                            workspace_id.clone(),
+                                                            cx,
+                                                        );
+                                                    });
+                                                }),
+                                        )
+                                    },
+                                )
                             }),
                     ),
             )
@@ -670,7 +777,12 @@ impl TaskPanel {
             )
     }
 
-    fn render_task_item(&self, task: &Rc<WorkspaceTask>, entity: Entity<Self>, cx: &Context<Self>) -> impl IntoElement {
+    fn render_task_item(
+        &self,
+        task: &Rc<WorkspaceTask>,
+        entity: Entity<Self>,
+        cx: &Context<Self>,
+    ) -> impl IntoElement {
         let theme = cx.theme();
         let task_id = task.id.clone();
         let is_selected = self.selected_task_id.as_ref() == Some(&task_id);
@@ -688,10 +800,8 @@ impl TaskPanel {
                 s.hover(|s| s.bg(theme.accent.opacity(0.5)))
             })
             .on_click(cx.listener({
-                
                 let task_id = task_id.clone();
                 move |this, _, window, cx| {
-                    log::debug!("===> on_click");
                     this.select_task(task_id.clone(), window, cx);
                 }
             }))
