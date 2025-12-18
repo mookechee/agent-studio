@@ -479,6 +479,15 @@ impl ConversationPanel {
                                     session_id,
                                     status
                                 );
+
+                                // Mark last message as complete when session completes or becomes idle
+                                if matches!(status, SessionStatus::Completed | SessionStatus::Idle) {
+                                    if let Some(last_item) = this.rendered_items.last_mut() {
+                                        last_item.mark_complete();
+                                        log::debug!("Marked last message as complete due to status change to {:?}", status);
+                                    }
+                                }
+
                                 // Update session status
                                 this.session_status = Some(SessionStatusInfo {
                                     agent_name,
