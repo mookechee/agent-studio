@@ -3,52 +3,15 @@ use gpui::{
     Window, div, prelude::FluentBuilder as _, px,
 };
 
-use agent_client_protocol::{self as acp, ToolCall, ToolCallContent, ToolCallStatus, ToolKind};
+use agent_client_protocol::{self as acp, ToolCall, ToolCallContent, ToolCallStatus};
 use gpui_component::{
-    ActiveTheme, Icon, IconName, Sizable,
+    ActiveTheme, IconName, Sizable,
     button::{Button, ButtonVariants},
     collapsible::Collapsible,
     h_flex, v_flex,
 };
 
-/// Helper trait to get icon for ToolKind
-pub trait ToolKindExt {
-    fn icon(&self) -> IconName;
-}
-
-impl ToolKindExt for ToolKind {
-    fn icon(&self) -> IconName {
-        match self {
-            ToolKind::Read => IconName::File,
-            ToolKind::Edit => IconName::Replace,
-            ToolKind::Delete => IconName::Delete,
-            ToolKind::Move => IconName::ArrowRight,
-            ToolKind::Search => IconName::Search,
-            ToolKind::Execute => IconName::SquareTerminal,
-            ToolKind::Think => IconName::Bot,
-            ToolKind::Fetch => IconName::Globe,
-            ToolKind::SwitchMode => IconName::ArrowRight,
-            ToolKind::Other | _ => IconName::Ellipsis,
-        }
-    }
-}
-
-/// Helper trait to get icon for ToolCallStatus
-pub trait ToolCallStatusExt {
-    fn icon(&self) -> IconName;
-}
-
-impl ToolCallStatusExt for ToolCallStatus {
-    fn icon(&self) -> IconName {
-        match self {
-            ToolCallStatus::Pending => IconName::Dash,
-            ToolCallStatus::InProgress => IconName::LoaderCircle,
-            ToolCallStatus::Completed => IconName::CircleCheck,
-            ToolCallStatus::Failed => IconName::CircleX,
-            _ => IconName::Dash,
-        }
-    }
-}
+use crate::panels::conversation::types::{ToolCallStatusExt, ToolKindExt};
 
 /// Helper to extract text from ToolCallContent
 fn extract_text_from_content(content: &ToolCallContent) -> Option<String> {
@@ -148,7 +111,9 @@ impl Render for ToolCallItem {
                     .bg(cx.theme().secondary)
                     .child(
                         // Kind icon
-                        Icon::new(self.tool_call.kind.icon())
+                        self.tool_call
+                            .kind
+                            .icon()
                             .size(px(16.))
                             .text_color(cx.theme().muted_foreground),
                     )
@@ -162,7 +127,9 @@ impl Render for ToolCallItem {
                     )
                     .child(
                         // Status icon
-                        Icon::new(self.tool_call.status.icon())
+                        self.tool_call
+                            .status
+                            .icon()
                             .size(px(14.))
                             .text_color(status_color),
                     )

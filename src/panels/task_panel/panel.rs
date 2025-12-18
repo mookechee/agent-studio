@@ -351,7 +351,10 @@ impl TaskPanel {
                     let workspace_service = workspace_service.clone();
                     let status_clone = status.clone();
                     cx.spawn(async move |_entity, _cx| {
-                        match workspace_service.update_task_status(&task_id, status_clone).await {
+                        match workspace_service
+                            .update_task_status(&task_id, status_clone)
+                            .await
+                        {
                             Ok(_) => {
                                 log::debug!("Task status persisted: {} -> {:?}", task_id, status);
                             }

@@ -307,9 +307,7 @@ impl WorkspaceService {
         let workspace_id = {
             let mut config = self.config.write().await;
 
-            let task = config
-                .remove_task(task_id)
-                .context("Task not found")?;
+            let task = config.remove_task(task_id).context("Task not found")?;
 
             task.workspace_id.clone()
         };

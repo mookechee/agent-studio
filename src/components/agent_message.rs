@@ -6,6 +6,8 @@ use gpui::{
 use gpui_component::{ActiveTheme, Icon, IconName, h_flex, text::TextView, v_flex};
 use serde::{Deserialize, Serialize};
 
+use crate::assets::get_agent_icon;
+
 /// Extended metadata for agent messages (stored in ContentChunk's meta field)
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -118,6 +120,9 @@ impl RenderOnce for AgentMessage {
         let full_text = self.data.full_text();
         let markdown_id = SharedString::from(format!("{}-markdown", self.id));
 
+        // Get icon based on agent name
+        let icon = Icon::new(get_agent_icon(&agent_name));
+
         v_flex()
             .gap_3()
             .w_full()
@@ -126,11 +131,7 @@ impl RenderOnce for AgentMessage {
                 h_flex()
                     .items_center()
                     .gap_2()
-                    .child(
-                        Icon::new(IconName::Bot)
-                            .size(px(16.))
-                            .text_color(cx.theme().accent),
-                    )
+                    .child(icon.size(px(16.)).text_color(cx.theme().foreground))
                     .child(
                         div()
                             .text_size(px(13.))

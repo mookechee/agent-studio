@@ -1,44 +1,45 @@
 use agent_client_protocol::{ContentBlock, ToolCallStatus, ToolKind};
 use gpui::SharedString;
-use gpui_component::IconName;
+use gpui_component::{Icon, IconName};
 
 // ============================================================================
 // Helper Traits
 // ============================================================================
 
+/// Helper trait to get icon for ToolKind
 pub trait ToolKindExt {
-    fn icon(&self) -> IconName;
+    fn icon(&self) -> Icon;
 }
 
 impl ToolKindExt for ToolKind {
-    fn icon(&self) -> IconName {
+    fn icon(&self) -> Icon {
         match self {
-            ToolKind::Read => IconName::File,
-            ToolKind::Edit => IconName::Replace,
-            ToolKind::Delete => IconName::Delete,
-            ToolKind::Move => IconName::ArrowRight,
-            ToolKind::Search => IconName::Search,
-            ToolKind::Execute => IconName::SquareTerminal,
-            ToolKind::Think => IconName::Bot,
-            ToolKind::Fetch => IconName::Globe,
-            ToolKind::SwitchMode => IconName::ArrowRight,
-            ToolKind::Other | _ => IconName::Ellipsis,
+            ToolKind::Read => Icon::new(IconName::Eye),
+            ToolKind::Edit => Icon::new(IconName::Replace),
+            ToolKind::Delete => Icon::new(IconName::Delete),
+            ToolKind::Move => Icon::new(IconName::ArrowRight),
+            ToolKind::Search => Icon::new(IconName::Search),
+            ToolKind::Execute => Icon::new(IconName::SquareTerminal),
+            ToolKind::Think => Icon::new(crate::assets::Icon::Brain),
+            ToolKind::Fetch => Icon::new(IconName::Globe),
+            ToolKind::SwitchMode => Icon::new(IconName::ArrowRight),
+            ToolKind::Other | _ => Icon::new(IconName::Ellipsis),
         }
     }
 }
 
 pub trait ToolCallStatusExt {
-    fn icon(&self) -> IconName;
+    fn icon(&self) -> Icon;
 }
 
 impl ToolCallStatusExt for ToolCallStatus {
-    fn icon(&self) -> IconName {
+    fn icon(&self) -> Icon {
         match self {
-            ToolCallStatus::Pending => IconName::Dash,
-            ToolCallStatus::InProgress => IconName::LoaderCircle,
-            ToolCallStatus::Completed => IconName::CircleCheck,
-            ToolCallStatus::Failed => IconName::CircleX,
-            _ => IconName::Dash,
+            ToolCallStatus::Pending => Icon::new(IconName::Dash),
+            ToolCallStatus::InProgress => Icon::new(IconName::Dash),
+            ToolCallStatus::Completed => Icon::new(IconName::CircleCheck),
+            ToolCallStatus::Failed => Icon::new(IconName::CircleX),
+            _ => Icon::new(IconName::Dash),
         }
     }
 }

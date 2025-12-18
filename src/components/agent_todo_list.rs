@@ -41,11 +41,14 @@ impl RenderOnce for PlanEntryItem {
 
         // Select icon and color based on status
         let (icon, icon_color) = match self.entry.status {
-            PlanEntryStatus::Completed => (IconName::CircleCheck, cx.theme().green),
-            PlanEntryStatus::InProgress => (IconName::LoaderCircle, cx.theme().accent),
-            PlanEntryStatus::Pending => (IconName::Dash, cx.theme().muted_foreground),
+            PlanEntryStatus::Completed => (Icon::new(IconName::CircleCheck), cx.theme().green),
+            PlanEntryStatus::InProgress => (
+                Icon::new(crate::assets::Icon::CircleDashed),
+                cx.theme().foreground,
+            ),
+            PlanEntryStatus::Pending => (Icon::new(IconName::Dash), cx.theme().muted_foreground),
             // Handle future variants
-            _ => (IconName::Dash, cx.theme().muted_foreground),
+            _ => (Icon::new(IconName::Dash), cx.theme().muted_foreground),
         };
 
         div().id(self.id).child(
@@ -55,7 +58,7 @@ impl RenderOnce for PlanEntryItem {
                 .child(
                     div()
                         .mt(px(1.))
-                        .child(Icon::new(icon).text_color(icon_color).size(px(16.))),
+                        .child(icon.text_color(icon_color).size(px(16.))),
                 )
                 .child(
                     div()
@@ -189,7 +192,7 @@ impl IntoElement for AgentTodoList {
                         h_flex()
                             .gap_2()
                             .items_center()
-                            .child(Icon::new(IconName::LayoutDashboard).size(px(16.)))
+                            .child(Icon::new(crate::assets::Icon::ListTodo).size(px(16.)))
                             .child(
                                 div()
                                     .text_size(px(14.))
