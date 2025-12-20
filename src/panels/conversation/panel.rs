@@ -17,7 +17,7 @@ use crate::{
 
 // Import from submodules
 use super::{
-    components::{ResourceItemState, ToolCallItemState, UserMessageView},
+    components::{AgentThoughtItemState, ResourceItemState, ToolCallItemState, UserMessageView},
     helpers::{extract_text_from_content, get_element_id, session_update_type_name},
     rendered_item::{RenderedItem, create_agent_message_data},
     types::ResourceInfo,
@@ -558,7 +558,7 @@ impl ConversationPanel {
                     .last_mut()
                     .map(|last_item| {
                         if last_item.can_accept_agent_thought_chunk() {
-                            last_item.try_append_agent_thought_chunk(text.clone())
+                            last_item.try_append_agent_thought_chunk(text.clone(), cx)
                         } else {
                             // Different type, mark the last item as complete
                             last_item.mark_complete();
@@ -571,7 +571,8 @@ impl ConversationPanel {
                     log::debug!("  └─ Merged AgentThoughtChunk into existing thought");
                 } else {
                     log::debug!("  └─ Creating new AgentThought");
-                    items.push(RenderedItem::AgentThought(text));
+                    let entity = cx.new(|_| AgentThoughtItemState::new(text));
+                    items.push(RenderedItem::AgentThought(entity));
                 }
             }
             SessionUpdate::ToolCall(tool_call) => {
@@ -1051,41 +1052,8 @@ impl Render for ConversationPanel {
                     let msg = AgentMessage::new(get_element_id(id), data.clone());
                     children = children.child(msg);
                 }
-                RenderedItem::AgentThought(text) => {
-                    children = children.child(
-                        div().pl_6().child(
-                            div()
-                                .p_3()
-                                .rounded_lg()
-                                .border_1()
-                                .border_color(cx.theme().border)
-                                .bg(cx.theme().muted.opacity(0.3))
-                                .child(
-                                    h_flex()
-                                        .items_center()
-                                        .gap_2()
-                                        .child(
-                                            Icon::new(IconName::Bot)
-                                                .size(px(14.))
-                                                .text_color(cx.theme().muted_foreground),
-                                        )
-                                        .child(
-                                            div()
-                                                .text_sm()
-                                                .text_color(cx.theme().muted_foreground)
-                                                .child("Thinking..."),
-                                        ),
-                                )
-                                .child(
-                                    div()
-                                        .mt_2()
-                                        .text_sm()
-                                        .italic()
-                                        .text_color(cx.theme().foreground.opacity(0.8))
-                                        .child(text.clone()),
-                                ),
-                        ),
-                    );
+                RenderedItem::AgentThought(entity) => {
+                    children = children.child(entity.clone());
                 }
                 RenderedItem::Plan(plan) => {
                     let todo_list = AgentTodoList::from_plan(plan.clone());
