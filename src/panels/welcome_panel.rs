@@ -47,7 +47,6 @@ pub struct WelcomePanel {
     /// Whether to show command suggestions (input starts with /)
     show_command_suggestions: bool,
     /// Selected command index for keyboard navigation
-    selected_command_index: Option<usize>,
     _subscriptions: Vec<Subscription>,
 }
 

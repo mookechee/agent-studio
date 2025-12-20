@@ -299,8 +299,8 @@ impl RenderOnce for ChatInputBox {
                     .p_0()
                     .text_sm()
                     .open(true) // Always open when show_command_suggestions is true
-                    .trigger(div()) // Empty div as trigger since we control visibility via open state
-                    .anchor_corner(gpui::AnchorCorner::TopLeft)
+                    // .trigger(div()) // Empty div as trigger since we control visibility via open state
+                    // .anchor_corner(gpui::AnchorCorner::TopLeft)
                     .child(
                         v_flex()
                             .w(px(500.))
