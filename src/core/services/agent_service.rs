@@ -5,7 +5,7 @@
 //! and Session is a child entity.
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, hash_map::Entry},
     sync::{Arc, RwLock},
     time::Duration,
 };
@@ -99,24 +99,40 @@ impl AgentService {
             .session_id
             .to_string();
 
-        // Store session information
+        let now = Utc::now();
         let session_info = AgentSessionInfo {
             session_id: session_id.clone(),
             agent_name: agent_name.to_string(),
-            created_at: Utc::now(),
-            last_active: Utc::now(),
+            created_at: now,
+            last_active: now,
             status: SessionStatus::Active,
             available_commands: Vec::new(), // Will be populated by AvailableCommandsUpdate
         };
 
         // Insert into nested HashMap structure
         let mut sessions = self.sessions.write().unwrap();
-        sessions
+        let agent_sessions = sessions
             .entry(agent_name.to_string())
-            .or_insert_with(HashMap::new)
-            .insert(session_id.clone(), session_info);
+            .or_insert_with(HashMap::new);
 
-        log::info!("Created session {} for agent {}", session_id, agent_name);
+        match agent_sessions.entry(session_id.clone()) {
+            Entry::Occupied(mut entry) => {
+                let info = entry.get_mut();
+                info.agent_name = agent_name.to_string();
+                info.created_at = now;
+                info.last_active = now;
+                info.status = SessionStatus::Active;
+                log::info!(
+                    "Session {} for agent {} already exists; refreshed metadata",
+                    session_id,
+                    agent_name
+                );
+            }
+            Entry::Vacant(entry) => {
+                entry.insert(session_info);
+                log::info!("Created session {} for agent {}", session_id, agent_name);
+            }
+        }
         Ok(session_id)
     }
 
@@ -215,28 +231,41 @@ impl AgentService {
     }
 
     /// Update session's available commands
-    pub fn update_session_commands(&self, agent_name: &str, session_id: &str, commands: Vec<AvailableCommand>) {
-        if let Some(agent_sessions) = self.sessions.write().unwrap().get_mut(agent_name) {
-            if let Some(info) = agent_sessions.get_mut(session_id) {
-                log::info!(
-                    "Updating available commands for {}:{} - {} commands",
-                    agent_name,
-                    session_id,
-                    commands.len()
-                );
+    pub fn update_session_commands(
+        &self,
+        agent_name: &str,
+        session_id: &str,
+        commands: Vec<AvailableCommand>,
+    ) {
+        let now = Utc::now();
+        let command_count = commands.len();
+        let mut sessions = self.sessions.write().unwrap();
+        let agent_sessions = sessions
+            .entry(agent_name.to_string())
+            .or_insert_with(HashMap::new);
+        log::info!(
+            "Updating available commands for {}:{} - {} commands",
+            agent_name,
+            session_id,
+            command_count
+        );
+
+        match agent_sessions.entry(session_id.to_string()) {
+            Entry::Occupied(mut entry) => {
+                let info = entry.get_mut();
                 info.available_commands = commands;
-            } else {
-                log::warn!(
-                    "Session {} not found for agent {} when updating commands",
-                    session_id,
-                    agent_name
-                );
+                info.last_active = now;
             }
-        } else {
-            log::warn!(
-                "No sessions found for agent {} when updating commands",
-                agent_name
-            );
+            Entry::Vacant(entry) => {
+                entry.insert(AgentSessionInfo {
+                    session_id: session_id.to_string(),
+                    agent_name: agent_name.to_string(),
+                    created_at: now,
+                    last_active: now,
+                    status: SessionStatus::Active,
+                    available_commands: commands,
+                });
+            }
         }
     }
 

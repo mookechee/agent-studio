@@ -54,6 +54,7 @@ impl MessageService {
         session_bus.subscribe(move |event| {
             let session_id = event.session_id.clone();
             let update = (*event.update).clone();
+            let agent_name = event.agent_name.clone();
             let service = persistence_service.clone();
             let agent_svc = agent_service.clone();
 
@@ -65,8 +66,11 @@ impl MessageService {
                     commands_update.available_commands.len()
                 );
 
-                // Get agent name for this session
-                if let Some(agent_name) = agent_svc.get_agent_for_session(&session_id) {
+                // Get agent name for this session (prefer event metadata if available)
+                let agent_name =
+                    agent_name.or_else(|| agent_svc.get_agent_for_session(&session_id));
+
+                if let Some(agent_name) = agent_name {
                     agent_svc.update_session_commands(
                         &agent_name,
                         &session_id,
@@ -172,6 +176,7 @@ impl MessageService {
 
         let user_event = SessionUpdateEvent {
             session_id: session_id.to_string(),
+            agent_name: self.agent_service.get_agent_for_session(session_id),
             update: Arc::new(SessionUpdate::UserMessageChunk(content_chunk)),
         };
 
@@ -203,6 +208,7 @@ impl MessageService {
         let content_chunk = ContentChunk::new(schema_block);
         let user_event = SessionUpdateEvent {
             session_id: session_id.to_string(),
+            agent_name: self.agent_service.get_agent_for_session(session_id),
             update: Arc::new(SessionUpdate::UserMessageChunk(content_chunk)),
         };
 

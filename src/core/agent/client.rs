@@ -587,6 +587,7 @@ impl acp::Client for GuiClient {
         // Publish event to the session bus
         let event = SessionUpdateEvent {
             session_id: args.session_id.to_string(),
+            agent_name: Some(self.agent_name.clone()),
             update: Arc::new(args.update),
         };
 

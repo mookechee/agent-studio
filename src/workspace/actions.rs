@@ -483,6 +483,7 @@ impl DockWorkspace {
 
             let user_event = crate::core::event_bus::session_bus::SessionUpdateEvent {
                 session_id: session_id.clone(),
+                agent_name: None,
                 update: Arc::new(acp::SessionUpdate::UserMessageChunk(content_chunk)),
             };
 
