@@ -140,9 +140,9 @@ impl RenderOnce for AgentMessage {
                     .child(
                         div().w_full().child(
                             TextView::markdown(markdown_id, full_text)
-                                // .text_size(px(14.))
+                                // .text_xs()
+                                .text_sm()
                                 .text_color(cx.theme().foreground)
-                                // .line_height(px(22.))
                                 .selectable(true),
                         ),
                     )
