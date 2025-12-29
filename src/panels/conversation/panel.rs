@@ -55,8 +55,6 @@ pub struct ConversationPanel {
     code_selections: Vec<AddCodeSelection>,
     /// Session status information for display
     session_status: Option<SessionStatusInfo>,
-    /// Diff summary for displaying file changes
-    diff_summary: Option<Entity<DiffSummary>>,
 }
 
 impl ConversationPanel {
@@ -110,7 +108,6 @@ impl ConversationPanel {
             pasted_images: Vec::new(),
             code_selections: Vec::new(),
             session_status: None,
-            diff_summary: None,
         }
     }
 
@@ -138,7 +135,6 @@ impl ConversationPanel {
             pasted_images: Vec::new(),
             code_selections: Vec::new(),
             session_status: None,
-            diff_summary: None,
         }
     }
 
@@ -195,6 +191,10 @@ impl ConversationPanel {
                                     this.rendered_items.len(),
                                     this.next_index
                                 );
+
+                                // Add DiffSummary if there are any tool calls with diffs
+                                this.add_diff_summary_if_needed(cx);
+
                                 // Scroll to bottom after loading history
                                 this.scroll_handle.scroll_to_bottom();
                                 cx.notify(); // Trigger re-render
@@ -476,6 +476,9 @@ impl ConversationPanel {
                                         last_item.mark_complete();
                                         log::debug!("Marked last message as complete due to status change to {:?}", status);
                                     }
+
+                                    // Add DiffSummary to message stream when session ends
+                                    this.add_diff_summary_if_needed(cx);
                                 }
 
                                 // Update session status
@@ -521,29 +524,19 @@ impl ConversationPanel {
         tool_calls
     }
 
-    /// Update the diff summary based on current tool calls
-    fn update_diff_summary(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+    /// Add DiffSummary to the message stream if there are any tool calls with diffs
+    fn add_diff_summary_if_needed(&mut self, cx: &mut Context<Self>) {
         // Collect all tool calls
         let tool_calls = self.collect_tool_calls(cx);
 
         // Create summary data from tool calls
         let summary_data = DiffSummaryData::from_tool_calls(&tool_calls);
 
-        // Only show summary if there are actual changes
-        if !summary_data.has_changes() {
-            // Clear summary if no changes
-            self.diff_summary = None;
-            return;
-        }
-
-        // Update or create diff summary
-        if let Some(summary) = &self.diff_summary {
-            summary.update(cx, |summary, cx| {
-                summary.update_data(summary_data, cx);
-            });
-        } else {
-            // Create new summary
-            self.diff_summary = Some(cx.new(|_| DiffSummary::new(summary_data)));
+        // Only add summary if there are actual changes
+        if summary_data.has_changes() {
+            log::info!("Adding DiffSummary to message stream with {} files changed", summary_data.total_files());
+            let diff_summary = cx.new(|_| DiffSummary::new(summary_data));
+            self.rendered_items.push(RenderedItem::DiffSummary(diff_summary));
         }
     }
 
@@ -1089,9 +1082,6 @@ impl Focusable for ConversationPanel {
 
 impl Render for ConversationPanel {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        // Update diff summary based on current tool calls
-        self.update_diff_summary(_window, cx);
-
         let mut children = v_flex().p_4().gap_3().bg(cx.theme().background);
 
         for item in &self.rendered_items {
@@ -1115,6 +1105,10 @@ impl Render for ConversationPanel {
                 }
                 RenderedItem::PermissionRequest(entity) => {
                     children = children.child(v_flex().pl_6().child(entity.clone()));
+                }
+                RenderedItem::DiffSummary(entity) => {
+                    // Render DiffSummary as part of message stream
+                    children = children.child(entity.clone());
                 }
                 RenderedItem::InfoUpdate(text) => {
                     children = children.child(
@@ -1174,16 +1168,6 @@ impl Render for ConversationPanel {
             )
             .when_some(self.render_status_bar(cx), |this, status_bar| {
                 this.child(status_bar)
-            })
-            .when_some(self.diff_summary.clone(), |this, summary| {
-                // Diff summary above input box
-                this.child(
-                    div()
-                        .w_full()
-                        .px_2()
-                        .pb_2()
-                        .child(summary)
-                )
             })
             .child(
                 // Chat input box at bottom (fixed, not scrollable)

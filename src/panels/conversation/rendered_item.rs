@@ -3,7 +3,7 @@ use agent_client_protocol::{ContentChunk, Plan};
 use gpui::{App, Entity};
 
 use super::components::{AgentThoughtItemState, ToolCallItemState, UserMessageView};
-use crate::{AgentMessageData, PermissionRequestView};
+use crate::{AgentMessageData, DiffSummary, PermissionRequestView};
 
 // ============================================================================
 // Rendered Item
@@ -21,6 +21,8 @@ pub enum RenderedItem {
     InfoUpdate(String),
     // Permission request
     PermissionRequest(Entity<PermissionRequestView>),
+    // Diff summary for file changes
+    DiffSummary(Entity<DiffSummary>),
 }
 
 impl RenderedItem {
