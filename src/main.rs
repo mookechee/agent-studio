@@ -20,9 +20,9 @@ fn main() {
             let config: Config = match std::fs::read_to_string(&config_path)
                 .with_context(|| format!("failed to read {}", config_path.display()))
             {
-                Ok(raw) => match serde_json::from_str(&raw).with_context(|| {
-                    format!("invalid config at {}", config_path.display())
-                }) {
+                Ok(raw) => match serde_json::from_str(&raw)
+                    .with_context(|| format!("invalid config at {}", config_path.display()))
+                {
                     Ok(config) => config,
                     Err(e) => {
                         eprintln!("Failed to parse config: {}", e);
@@ -62,8 +62,7 @@ fn main() {
                     // Store in global AppState
                     let init_result = cx.update(|cx| {
                         // Set config path first
-                        agentx::AppState::global_mut(cx)
-                            .set_config_path(config_path.clone());
+                        agentx::AppState::global_mut(cx).set_config_path(config_path.clone());
                         // Then set agent manager with config
                         agentx::AppState::global_mut(cx).set_agent_manager(manager, config);
                         agentx::AppState::global_mut(cx).set_permission_store(permission_store);

@@ -1,7 +1,10 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    App, AppContext as _, Bounds, ClickEvent, Context, Corner, ElementId, Entity, EventEmitter, Focusable, InteractiveElement as _, IntoElement, KeystrokeEvent, Length, MouseButton, ParentElement as _, Pixels, RenderOnce, SharedString, StyleRefinement, Styled, Subscription, Window, anchored, deferred, div, prelude::FluentBuilder as _, px
+    App, AppContext as _, Bounds, ClickEvent, Context, Corner, ElementId, Entity, EventEmitter,
+    Focusable, InteractiveElement as _, IntoElement, KeystrokeEvent, Length, MouseButton,
+    ParentElement as _, Pixels, RenderOnce, SharedString, StyleRefinement, Styled, Subscription,
+    Window, anchored, deferred, div, prelude::FluentBuilder as _, px,
 };
 
 use gpui_component::{
@@ -193,12 +196,7 @@ impl<T: InputSuggestionItem + 'static> InputSuggestionState<T> {
         cx.notify();
     }
 
-    pub fn move_selection(
-        &mut self,
-        delta: isize,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    pub fn move_selection(&mut self, delta: isize, window: &mut Window, cx: &mut Context<Self>) {
         if self.items.is_empty() {
             return;
         }
@@ -218,12 +216,7 @@ impl<T: InputSuggestionItem + 'static> InputSuggestionState<T> {
         cx.notify();
     }
 
-    pub fn confirm_index(
-        &mut self,
-        index: usize,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    pub fn confirm_index(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {
         if index >= self.items.len() {
             return;
         }
@@ -567,7 +560,12 @@ impl<T: InputSuggestionItem + 'static> RenderOnce for InputSuggestion<T> {
             if let Some(enabled) = enabled {
                 state.set_enabled(enabled, window, cx);
             }
-            state.set_callbacks(on_query_change, on_confirm, on_open_change, on_select_change);
+            state.set_callbacks(
+                on_query_change,
+                on_confirm,
+                on_open_change,
+                on_select_change,
+            );
             state.set_clear_on_confirm(clear_on_confirm);
             state.set_apply_on_confirm(apply_on_confirm);
         });
@@ -648,9 +646,7 @@ impl<T: InputSuggestionItem + 'static> RenderOnce for InputSuggestion<T> {
                     .occlude()
                     .popover_style(cx)
                     .p_2()
-                    .when_some(self.max_height, |this, height| {
-                        this.max_h(height)
-                    })
+                    .when_some(self.max_height, |this, height| this.max_h(height))
                     .child(list)
                     .refine_style(&self.style);
 

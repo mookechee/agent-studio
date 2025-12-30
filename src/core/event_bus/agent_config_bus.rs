@@ -6,7 +6,9 @@
 
 use std::sync::{Arc, Mutex};
 
-use crate::core::config::{AgentProcessConfig, CommandConfig, Config, McpServerConfig, ModelConfig};
+use crate::core::config::{
+    AgentProcessConfig, CommandConfig, Config, McpServerConfig, ModelConfig,
+};
 
 /// Events published when agent configuration changes
 #[derive(Clone, Debug)]
@@ -27,15 +29,9 @@ pub enum AgentConfigEvent {
 
     // ========== Model Events ==========
     /// A new model was added
-    ModelAdded {
-        name: String,
-        config: ModelConfig,
-    },
+    ModelAdded { name: String, config: ModelConfig },
     /// An existing model's configuration was updated
-    ModelUpdated {
-        name: String,
-        config: ModelConfig,
-    },
+    ModelUpdated { name: String, config: ModelConfig },
     /// A model was removed
     ModelRemoved { name: String },
 
@@ -55,15 +51,9 @@ pub enum AgentConfigEvent {
 
     // ========== Command Events ==========
     /// A new command was added
-    CommandAdded {
-        name: String,
-        config: CommandConfig,
-    },
+    CommandAdded { name: String, config: CommandConfig },
     /// An existing command's configuration was updated
-    CommandUpdated {
-        name: String,
-        config: CommandConfig,
-    },
+    CommandUpdated { name: String, config: CommandConfig },
     /// A command was removed
     CommandRemoved { name: String },
 

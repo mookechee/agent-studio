@@ -2,12 +2,7 @@ use gpui::{
     App, ClipboardEntry, Context, Entity, FocusHandle, Focusable, IntoElement, ParentElement,
     Render, ScrollHandle, SharedString, Styled, Timer, Window, div, prelude::*, px,
 };
-use gpui_component::{
-    ActiveTheme, Icon, IconName, h_flex,
-    input::InputState,
-    scroll::{ScrollableElement, ScrollbarAxis},
-    v_flex,
-};
+use gpui_component::{ActiveTheme, Icon, IconName, h_flex, input::InputState, v_flex};
 
 // Use the published ACP schema crate
 use agent_client_protocol::{ContentChunk, ImageContent, SessionUpdate, ToolCall};
@@ -560,9 +555,13 @@ impl ConversationPanel {
 
         // Only add summary if there are actual changes
         if summary_data.has_changes() {
-            log::info!("Adding DiffSummary to message stream with {} files changed", summary_data.total_files());
+            log::info!(
+                "Adding DiffSummary to message stream with {} files changed",
+                summary_data.total_files()
+            );
             let diff_summary = cx.new(|_| DiffSummary::new(summary_data));
-            self.rendered_items.push(RenderedItem::DiffSummary(diff_summary));
+            self.rendered_items
+                .push(RenderedItem::DiffSummary(diff_summary));
         }
     }
 

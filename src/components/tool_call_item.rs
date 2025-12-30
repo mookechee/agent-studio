@@ -194,7 +194,7 @@ impl Render for ToolCallItem {
                                         .text_size(px(11.))
                                         .font_weight(gpui::FontWeight::MEDIUM)
                                         .text_color(cx.theme().green)
-                                        .child(format!("+{}", stats.additions))
+                                        .child(format!("+{}", stats.additions)),
                                 )
                                 .child(
                                     // Deletions
@@ -202,8 +202,8 @@ impl Render for ToolCallItem {
                                         .text_size(px(11.))
                                         .font_weight(gpui::FontWeight::MEDIUM)
                                         .text_color(cx.theme().red)
-                                        .child(format!("-{}", stats.deletions))
-                                )
+                                        .child(format!("-{}", stats.deletions)),
+                                ),
                         )
                     })
                     .child(

@@ -1,7 +1,4 @@
-use gpui::{
-    Context, IntoElement, ParentElement, Render, Styled, Window, div, prelude::*,
-    px,
-};
+use gpui::{Context, IntoElement, ParentElement, Render, Styled, Window, div, prelude::*, px};
 use gpui_component::{
     ActiveTheme, Icon, IconName, Sizable,
     button::{Button, ButtonVariants},
@@ -41,7 +38,12 @@ impl FileChangeStats {
             None => (new_text.lines().count(), 0, true),
         };
 
-        Self { path, additions, deletions, is_new_file }
+        Self {
+            path,
+            additions,
+            deletions,
+            is_new_file,
+        }
     }
 
     /// Get total number of changed lines
@@ -95,11 +97,7 @@ impl DiffSummaryData {
         let mut merged_states = HashMap::new();
 
         for (path, (first_old, final_new, _is_new)) in file_states {
-            let stats = FileChangeStats::from_diff(
-                path.clone(),
-                first_old.as_deref(),
-                &final_new,
-            );
+            let stats = FileChangeStats::from_diff(path.clone(), first_old.as_deref(), &final_new);
             files.insert(path.clone(), stats);
             // Store merged state for creating synthetic ToolCall later
             merged_states.insert(path, (first_old, final_new));
@@ -116,17 +114,23 @@ impl DiffSummaryData {
     /// For files edited multiple times, returns a synthetic ToolCall with merged diff (initial → final)
     /// For files edited once, returns the original ToolCall
     pub fn find_tool_call_for_file(&self, path: &PathBuf) -> Option<ToolCall> {
-        let edit_count = self.tool_calls.iter()
+        let edit_count = self
+            .tool_calls
+            .iter()
             .flat_map(|tc| &tc.content)
             .filter(|c| matches!(c, ToolCallContent::Diff(d) if &d.path == path))
             .count();
 
         match edit_count {
             0 => None,
-            1 => self.tool_calls.iter()
-                .find(|tc| tc.content.iter().any(|c|
-                    matches!(c, ToolCallContent::Diff(d) if &d.path == path)
-                ))
+            1 => self
+                .tool_calls
+                .iter()
+                .find(|tc| {
+                    tc.content
+                        .iter()
+                        .any(|c| matches!(c, ToolCallContent::Diff(d) if &d.path == path))
+                })
                 .cloned(),
             _ => self.create_merged_tool_call(path, edit_count),
         }
@@ -137,8 +141,7 @@ impl DiffSummaryData {
         let (first_old, final_new) = self.merged_states.get(path)?;
         let filename = path.file_name()?.to_str().unwrap_or("unknown");
 
-        let merged_diff = Diff::new(path.clone(), final_new.clone())
-            .old_text(first_old.clone());
+        let merged_diff = Diff::new(path.clone(), final_new.clone()).old_text(first_old.clone());
 
         let mut tool_call = ToolCall::new(
             ToolCallId::from(format!("merged-{}", path.display())),
@@ -205,7 +208,12 @@ impl DiffSummary {
     }
 
     /// Render change statistics (additions/deletions)
-    fn render_stats(&self, additions: usize, deletions: usize, cx: &Context<Self>) -> impl IntoElement {
+    fn render_stats(
+        &self,
+        additions: usize,
+        deletions: usize,
+        cx: &Context<Self>,
+    ) -> impl IntoElement {
         h_flex()
             .gap_2()
             .items_center()
@@ -215,7 +223,7 @@ impl DiffSummary {
                         .text_size(px(12.))
                         .font_weight(gpui::FontWeight::MEDIUM)
                         .text_color(cx.theme().green)
-                        .child(format!("+{}", additions))
+                        .child(format!("+{}", additions)),
                 )
             })
             .when(deletions > 0, |this| {
@@ -224,7 +232,7 @@ impl DiffSummary {
                         .text_size(px(12.))
                         .font_weight(gpui::FontWeight::MEDIUM)
                         .text_color(cx.theme().red)
-                        .child(format!("-{}", deletions))
+                        .child(format!("-{}", deletions)),
                 )
             })
     }
@@ -236,7 +244,8 @@ impl DiffSummary {
         _window: &mut Window,
         cx: &Context<Self>,
     ) -> gpui::AnyElement {
-        let filename = stats.path
+        let filename = stats
+            .path
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("unknown")
@@ -247,21 +256,18 @@ impl DiffSummary {
 
         div()
             .w_full()
-            .on_mouse_down(
-                gpui::MouseButton::Left,
-                move |_event, window, cx| {
-                    if let Some(tool_call) = data.find_tool_call_for_file(&file_path) {
-                        use crate::ShowToolCallDetail;
-                        window.dispatch_action(
-                            Box::new(ShowToolCallDetail {
-                                tool_call_id: tool_call.tool_call_id.to_string(),
-                                tool_call,
-                            }),
-                            cx,
-                        );
-                    }
-                },
-            )
+            .on_mouse_down(gpui::MouseButton::Left, move |_event, window, cx| {
+                if let Some(tool_call) = data.find_tool_call_for_file(&file_path) {
+                    use crate::ShowToolCallDetail;
+                    window.dispatch_action(
+                        Box::new(ShowToolCallDetail {
+                            tool_call_id: tool_call.tool_call_id.to_string(),
+                            tool_call,
+                        }),
+                        cx,
+                    );
+                }
+            })
             .child(
                 h_flex()
                     .w_full()
@@ -300,7 +306,7 @@ impl DiffSummary {
                         Icon::new(IconName::ChevronRight)
                             .size(px(14.))
                             .text_color(cx.theme().muted_foreground),
-                    )
+                    ),
             )
             .into_any_element()
     }

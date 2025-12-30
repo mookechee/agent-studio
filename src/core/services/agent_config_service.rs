@@ -3,18 +3,15 @@
 //! This service manages agent configuration CRUD operations, validation,
 //! persistence, and hot-reload functionality.
 
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-
-use anyhow::{Context, Result, anyhow};
-use serde::{Deserialize, Serialize};
 
 use crate::core::agent::AgentManager;
 use crate::core::config::{AgentProcessConfig, Config};
 use crate::core::event_bus::{AgentConfigBusContainer, AgentConfigEvent};
 use crate::core::services::AgentService;
+use anyhow::{Context, Result, anyhow};
 
 /// Agent Configuration Service
 ///
@@ -308,7 +305,11 @@ impl AgentConfigService {
     // ========== Model Configuration Operations ==========
 
     /// Add a new model configuration
-    pub async fn add_model(&self, name: String, config: crate::core::config::ModelConfig) -> Result<()> {
+    pub async fn add_model(
+        &self,
+        name: String,
+        config: crate::core::config::ModelConfig,
+    ) -> Result<()> {
         // Check for duplicate
         {
             let current_config = self.config.read().await;
@@ -337,7 +338,11 @@ impl AgentConfigService {
     }
 
     /// Update an existing model configuration
-    pub async fn update_model(&self, name: &str, config: crate::core::config::ModelConfig) -> Result<()> {
+    pub async fn update_model(
+        &self,
+        name: &str,
+        config: crate::core::config::ModelConfig,
+    ) -> Result<()> {
         // Check if model exists
         {
             let current_config = self.config.read().await;
@@ -349,7 +354,9 @@ impl AgentConfigService {
         // Update config
         {
             let mut current_config = self.config.write().await;
-            current_config.models.insert(name.to_string(), config.clone());
+            current_config
+                .models
+                .insert(name.to_string(), config.clone());
         }
 
         // Save to file
@@ -396,7 +403,11 @@ impl AgentConfigService {
     // ========== MCP Server Configuration Operations ==========
 
     /// Add a new MCP server configuration
-    pub async fn add_mcp_server(&self, name: String, config: crate::core::config::McpServerConfig) -> Result<()> {
+    pub async fn add_mcp_server(
+        &self,
+        name: String,
+        config: crate::core::config::McpServerConfig,
+    ) -> Result<()> {
         // Check for duplicate
         {
             let current_config = self.config.read().await;
@@ -408,7 +419,9 @@ impl AgentConfigService {
         // Update config
         {
             let mut current_config = self.config.write().await;
-            current_config.mcp_servers.insert(name.clone(), config.clone());
+            current_config
+                .mcp_servers
+                .insert(name.clone(), config.clone());
         }
 
         // Save to file
@@ -425,7 +438,11 @@ impl AgentConfigService {
     }
 
     /// Update an existing MCP server configuration
-    pub async fn update_mcp_server(&self, name: &str, config: crate::core::config::McpServerConfig) -> Result<()> {
+    pub async fn update_mcp_server(
+        &self,
+        name: &str,
+        config: crate::core::config::McpServerConfig,
+    ) -> Result<()> {
         // Check if MCP server exists
         {
             let current_config = self.config.read().await;
@@ -437,7 +454,9 @@ impl AgentConfigService {
         // Update config
         {
             let mut current_config = self.config.write().await;
-            current_config.mcp_servers.insert(name.to_string(), config.clone());
+            current_config
+                .mcp_servers
+                .insert(name.to_string(), config.clone());
         }
 
         // Save to file
@@ -484,7 +503,11 @@ impl AgentConfigService {
     // ========== Command Configuration Operations ==========
 
     /// Add a new command configuration
-    pub async fn add_command(&self, name: String, config: crate::core::config::CommandConfig) -> Result<()> {
+    pub async fn add_command(
+        &self,
+        name: String,
+        config: crate::core::config::CommandConfig,
+    ) -> Result<()> {
         // Check for duplicate
         {
             let current_config = self.config.read().await;
@@ -513,7 +536,11 @@ impl AgentConfigService {
     }
 
     /// Update an existing command configuration
-    pub async fn update_command(&self, name: &str, config: crate::core::config::CommandConfig) -> Result<()> {
+    pub async fn update_command(
+        &self,
+        name: &str,
+        config: crate::core::config::CommandConfig,
+    ) -> Result<()> {
         // Check if command exists
         {
             let current_config = self.config.read().await;
@@ -525,7 +552,9 @@ impl AgentConfigService {
         // Update config
         {
             let mut current_config = self.config.write().await;
-            current_config.commands.insert(name.to_string(), config.clone());
+            current_config
+                .commands
+                .insert(name.to_string(), config.clone());
         }
 
         // Save to file
@@ -654,9 +683,7 @@ impl AgentConfigService {
 
         // Publish reload event with full config
         self.event_bus
-            .publish(AgentConfigEvent::ConfigReloaded {
-                config: new_config,
-            });
+            .publish(AgentConfigEvent::ConfigReloaded { config: new_config });
 
         log::info!("Configuration reloaded from: {:?}", self.config_path);
         Ok(())

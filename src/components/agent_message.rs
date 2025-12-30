@@ -138,14 +138,17 @@ impl RenderOnce for AgentMessage {
                     .child(icon.size(px(16.)).mt_1().text_color(cx.theme().foreground))
                     // Message content with markdown rendering
                     .child(
-                        div().w_full().child(
-                            TextView::markdown(markdown_id, full_text)
-                                // .text_xs()
-                                .text_sm()
-                                .text_color(cx.theme().foreground)
-                                .selectable(true)
-                                .pr_3(),
-                        ).pr_3(),
+                        div()
+                            .w_full()
+                            .child(
+                                TextView::markdown(markdown_id, full_text)
+                                    // .text_xs()
+                                    .text_sm()
+                                    .text_color(cx.theme().foreground)
+                                    .selectable(true)
+                                    .pr_3(),
+                            )
+                            .pr_3(),
                     )
                     .when(show_thinking, |this| {
                         this.child(

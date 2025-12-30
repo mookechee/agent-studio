@@ -6,10 +6,12 @@ use std::{rc::Rc, sync::Arc};
 
 use gpui_component::{
     ActiveTheme, Disableable, Icon, IconName, Sizable,
-    button::{Button, ButtonCustomVariant, ButtonVariants}, h_flex,
+    button::{Button, ButtonCustomVariant, ButtonVariants},
+    h_flex,
     input::{Input, InputState},
     popover::Popover,
-    select::{Select, SelectState}, v_flex,
+    select::{Select, SelectState},
+    v_flex,
 };
 
 use agent_client_protocol::{AvailableCommand, ImageContent};
@@ -18,8 +20,8 @@ use crate::app::actions::AddCodeSelection;
 use crate::components::{
     AgentItem, FileItem, InputSuggestion, InputSuggestionItem, InputSuggestionState,
 };
-use crate::core::services::SessionStatus;
 use crate::core::config::McpServerConfig;
+use crate::core::services::SessionStatus;
 
 impl InputSuggestionItem for AvailableCommand {
     fn label(&self) -> SharedString {
@@ -320,10 +322,8 @@ impl RenderOnce for ChatInputBox {
         let on_paste_callback = self.on_paste.clone();
         let input_state_for_paste = self.input_state.clone();
         let input_state = self.input_state.clone();
-        let suggestion_state_id = ElementId::NamedChild(
-            Arc::new(self.id.clone()),
-            "command-suggestions".into(),
-        );
+        let suggestion_state_id =
+            ElementId::NamedChild(Arc::new(self.id.clone()), "command-suggestions".into());
         let suggestion_state = window.use_keyed_state(suggestion_state_id, cx, |window, cx| {
             InputSuggestionState::with_input(input_state.clone(), window, cx)
         });

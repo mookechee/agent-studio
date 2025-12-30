@@ -5,8 +5,8 @@ use gpui::{
 };
 use gpui_component::{ActiveTheme, Icon, IconName, h_flex, text::TextView, v_flex};
 
-use similar::{ChangeTag, TextDiff};
 use gpui_component::highlighter::Language;
+use similar::{ChangeTag, TextDiff};
 
 use agent_client_protocol::{ContentBlock, ToolCall, ToolCallContent};
 
@@ -22,15 +22,9 @@ enum DiffLine {
         new_num: usize,
     },
     /// Line added in new version
-    Insert {
-        line: String,
-        new_num: usize,
-    },
+    Insert { line: String, new_num: usize },
     /// Line deleted from old version
-    Delete {
-        line: String,
-        old_num: usize,
-    },
+    Delete { line: String, old_num: usize },
 }
 
 /// Represents a display item in the diff view (can be a line or a collapsed section)
@@ -171,8 +165,9 @@ impl ToolCallDetailPanel {
                                 // Collapse the middle
                                 let collapsed_count = distance - CONTEXT_LINES * 2;
                                 if collapsed_count > 0 {
-                                    if let DiffLine::Context { old_num, new_num, .. } =
-                                        &context_buffer[CONTEXT_LINES]
+                                    if let DiffLine::Context {
+                                        old_num, new_num, ..
+                                    } = &context_buffer[CONTEXT_LINES]
                                     {
                                         display_items.push(DiffDisplayItem::Collapsed {
                                             start_old: *old_num,
@@ -198,8 +193,9 @@ impl ToolCallDetailPanel {
                             if context_buffer.len() > CONTEXT_LINES {
                                 // Collapse leading context, only show last CONTEXT_LINES
                                 let collapsed_count = context_buffer.len() - CONTEXT_LINES;
-                                if let DiffLine::Context { old_num, new_num, .. } =
-                                    &context_buffer[0]
+                                if let DiffLine::Context {
+                                    old_num, new_num, ..
+                                } = &context_buffer[0]
                                 {
                                     display_items.push(DiffDisplayItem::Collapsed {
                                         start_old: *old_num,
@@ -239,8 +235,9 @@ impl ToolCallDetailPanel {
                 }
 
                 let collapsed_count = context_buffer.len() - CONTEXT_LINES;
-                if let DiffLine::Context { old_num, new_num, .. } =
-                    &context_buffer[CONTEXT_LINES]
+                if let DiffLine::Context {
+                    old_num, new_num, ..
+                } = &context_buffer[CONTEXT_LINES]
                 {
                     display_items.push(DiffDisplayItem::Collapsed {
                         start_old: *old_num,
@@ -260,13 +257,13 @@ impl ToolCallDetailPanel {
     }
 
     /// Render a single diff line (Phase 1: plain text)
-    fn render_diff_line(
-        &self,
-        diff_line: &DiffLine,
-        cx: &Context<Self>,
-    ) -> impl IntoElement {
+    fn render_diff_line(&self, diff_line: &DiffLine, cx: &Context<Self>) -> impl IntoElement {
         match diff_line {
-            DiffLine::Context { line, old_num, new_num } => {
+            DiffLine::Context {
+                line,
+                old_num,
+                new_num,
+            } => {
                 h_flex()
                     .w_full()
                     .font_family("Monaco, 'Courier New', monospace")
@@ -278,7 +275,7 @@ impl ToolCallDetailPanel {
                             .min_w(px(70.))
                             .px_2()
                             .text_color(cx.theme().muted_foreground)
-                            .child(format!("{:>4} {:>4}  ", old_num, new_num))
+                            .child(format!("{:>4} {:>4}  ", old_num, new_num)),
                     )
                     .child(
                         // 代码内容
@@ -286,57 +283,53 @@ impl ToolCallDetailPanel {
                             .flex_1()
                             .px_2()
                             .text_color(cx.theme().foreground)
-                            .child(line.clone())
+                            .child(line.clone()),
                     )
             }
-            DiffLine::Insert { line, new_num } => {
-                h_flex()
-                    .w_full()
-                    .bg(cx.theme().green.opacity(0.1))
-                    .border_l_2()
-                    .border_color(cx.theme().green)
-                    .font_family("Monaco, 'Courier New', monospace")
-                    .text_size(px(12.))
-                    .line_height(px(18.))
-                    .child(
-                        div()
-                            .min_w(px(70.))
-                            .px_2()
-                            .text_color(cx.theme().green)
-                            .child(format!("     {:>4} +", new_num))
-                    )
-                    .child(
-                        div()
-                            .flex_1()
-                            .px_2()
-                            .text_color(cx.theme().green)
-                            .child(line.clone())
-                    )
-            }
-            DiffLine::Delete { line, old_num } => {
-                h_flex()
-                    .w_full()
-                    .bg(cx.theme().red.opacity(0.1))
-                    .border_l_2()
-                    .border_color(cx.theme().red)
-                    .font_family("Monaco, 'Courier New', monospace")
-                    .text_size(px(12.))
-                    .line_height(px(18.))
-                    .child(
-                        div()
-                            .min_w(px(70.))
-                            .px_2()
-                            .text_color(cx.theme().red)
-                            .child(format!("{:>4}      -", old_num))
-                    )
-                    .child(
-                        div()
-                            .flex_1()
-                            .px_2()
-                            .text_color(cx.theme().red)
-                            .child(line.clone())
-                    )
-            }
+            DiffLine::Insert { line, new_num } => h_flex()
+                .w_full()
+                .bg(cx.theme().green.opacity(0.1))
+                .border_l_2()
+                .border_color(cx.theme().green)
+                .font_family("Monaco, 'Courier New', monospace")
+                .text_size(px(12.))
+                .line_height(px(18.))
+                .child(
+                    div()
+                        .min_w(px(70.))
+                        .px_2()
+                        .text_color(cx.theme().green)
+                        .child(format!("     {:>4} +", new_num)),
+                )
+                .child(
+                    div()
+                        .flex_1()
+                        .px_2()
+                        .text_color(cx.theme().green)
+                        .child(line.clone()),
+                ),
+            DiffLine::Delete { line, old_num } => h_flex()
+                .w_full()
+                .bg(cx.theme().red.opacity(0.1))
+                .border_l_2()
+                .border_color(cx.theme().red)
+                .font_family("Monaco, 'Courier New', monospace")
+                .text_size(px(12.))
+                .line_height(px(18.))
+                .child(
+                    div()
+                        .min_w(px(70.))
+                        .px_2()
+                        .text_color(cx.theme().red)
+                        .child(format!("{:>4}      -", old_num)),
+                )
+                .child(
+                    div()
+                        .flex_1()
+                        .px_2()
+                        .text_color(cx.theme().red)
+                        .child(line.clone()),
+                ),
         }
     }
 
@@ -367,7 +360,7 @@ impl ToolCallDetailPanel {
                         start_old + count - 1,
                         start_new,
                         start_new + count - 1
-                    ))
+                    )),
             )
     }
 
@@ -379,10 +372,13 @@ impl ToolCallDetailPanel {
     ) -> impl IntoElement {
         match item {
             DiffDisplayItem::Line(line) => self.render_diff_line(line, cx).into_any_element(),
-            DiffDisplayItem::Collapsed { start_old, start_new, count } => {
-                self.render_collapsed_section(*start_old, *start_new, *count, cx)
-                    .into_any_element()
-            }
+            DiffDisplayItem::Collapsed {
+                start_old,
+                start_new,
+                count,
+            } => self
+                .render_collapsed_section(*start_old, *start_new, *count, cx)
+                .into_any_element(),
         }
     }
 
@@ -394,17 +390,18 @@ impl ToolCallDetailPanel {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         // 检测语言 (Phase 2 将用于语法高亮)
-        let _language = diff.path
+        let _language = diff
+            .path
             .extension()
             .and_then(|ext| ext.to_str())
             .map(|ext| Language::from_str(ext))
-            .unwrap_or(Language::Json);  // 使用 Json 作为默认值(Plain 仅在 feature 启用时存在)
+            .unwrap_or(Language::Json); // 使用 Json 作为默认值(Plain 仅在 feature 启用时存在)
 
         // 计算 diff
         let diff_lines = match &diff.old_text {
             Some(old_text) => {
                 if old_text == &diff.new_text {
-                    Vec::new()  // 无变化
+                    Vec::new() // 无变化
                 } else {
                     self.compute_diff(old_text, &diff.new_text)
                 }
@@ -463,9 +460,9 @@ impl ToolCallDetailPanel {
                                 .bg(cx.theme().green.opacity(0.2))
                                 .text_size(px(11.))
                                 .text_color(cx.theme().green)
-                                .child("NEW FILE")
+                                .child("NEW FILE"),
                         )
-                    })
+                    }),
             )
             // 大文件警告
             .when(truncated, |this| {
@@ -481,7 +478,7 @@ impl ToolCallDetailPanel {
                         .child(format!(
                             "⚠️ Diff too large ({} lines). Showing first {}.",
                             total_lines, MAX_DIFF_LINES
-                        ))
+                        )),
                 )
             })
             // Diff 内容
@@ -504,16 +501,16 @@ impl ToolCallDetailPanel {
                                         .justify_center()
                                         .text_color(cx.theme().muted_foreground)
                                         .text_size(px(12.))
-                                        .child("No changes")
+                                        .child("No changes"),
                                 )
                             })
                             .children(
                                 display_items
                                     .iter()
                                     .take(MAX_DIFF_LINES)
-                                    .map(|item| self.render_diff_display_item(item, cx))
-                            )
-                    )
+                                    .map(|item| self.render_diff_display_item(item, cx)),
+                            ),
+                    ),
             )
             .into_any_element()
     }

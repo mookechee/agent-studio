@@ -1,10 +1,12 @@
 use gpui::{
-    App, Bounds, Context, Corner, ElementId, IntoElement, ParentElement, Pixels, Point,
-    RenderOnce, Styled, Window, anchored, deferred, div, prelude::FluentBuilder, px,
+    App, Bounds, Context, Corner, ElementId, IntoElement, ParentElement, Pixels, Point, RenderOnce,
+    Styled, Window, anchored, deferred, div, prelude::FluentBuilder, px,
 };
 
 use gpui_component::{
-    ActiveTheme, IndexPath, h_flex, list::{List, ListDelegate, ListItem, ListState}, v_flex,
+    ActiveTheme, IndexPath, h_flex,
+    list::{List, ListDelegate, ListItem, ListState},
+    v_flex,
 };
 
 use agent_client_protocol::AvailableCommand;
@@ -56,32 +58,34 @@ impl ListDelegate for CommandSuggestionsListDelegate {
         let command_count = self.commands.len();
 
         Some(
-            ListItem::new(ix).w_full().child(
-                h_flex()
-                    .w_full()
-                    .gap_3()
-                    .items_center()
-                    .child(
-                        div()
-                            .w(px(140.))
-                            .text_sm()
-                            .font_family("Monaco, 'Courier New', monospace")
-                            .text_color(theme.popover_foreground)
-                            .child(format!("/{}", command.name)),
-                    )
-                    .child(
-                        div()
-                            .flex_1()
-                            .text_sm()
-                            .text_color(theme.muted_foreground)
-                            .overflow_x_hidden()
-                            .text_ellipsis()
-                            .child(command.description.clone()),
-                    ),
-            )
-            .when(ix.row + 1 < command_count, |item| {
-                item.border_b_1().border_color(theme.border)
-            }),
+            ListItem::new(ix)
+                .w_full()
+                .child(
+                    h_flex()
+                        .w_full()
+                        .gap_3()
+                        .items_center()
+                        .child(
+                            div()
+                                .w(px(140.))
+                                .text_sm()
+                                .font_family("Monaco, 'Courier New', monospace")
+                                .text_color(theme.popover_foreground)
+                                .child(format!("/{}", command.name)),
+                        )
+                        .child(
+                            div()
+                                .flex_1()
+                                .text_sm()
+                                .text_color(theme.muted_foreground)
+                                .overflow_x_hidden()
+                                .text_ellipsis()
+                                .child(command.description.clone()),
+                        ),
+                )
+                .when(ix.row + 1 < command_count, |item| {
+                    item.border_b_1().border_color(theme.border)
+                }),
         )
     }
 
