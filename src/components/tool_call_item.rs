@@ -1,6 +1,6 @@
 use gpui::{
-    App, AppContext, Context, Entity, IntoElement, ParentElement, Render, SharedString, Styled,
-    Window, div, prelude::FluentBuilder as _, px,
+    AnyElement, App, AppContext, Context, Entity, IntoElement, ParentElement, Render, RenderOnce,
+    SharedString, Styled, Window, div, prelude::FluentBuilder as _, px,
 };
 
 use agent_client_protocol::{self as acp, ToolCall, ToolCallContent, ToolCallStatus};
@@ -12,7 +12,7 @@ use gpui_component::{
 };
 use similar::{ChangeTag, TextDiff};
 
-use crate::components::StatusIndicator;
+use crate::components::{StatusIndicator, DiffView};
 use crate::core::services::SessionStatus;
 use crate::panels::conversation::types::{ToolCallStatusExt, ToolKindExt};
 
@@ -61,24 +61,6 @@ fn extract_diff_stats_from_tool_call(tool_call: &ToolCall) -> Option<DiffStats> 
         }
     }
     None
-}
-
-/// Helper to extract text from ToolCallContent
-fn extract_text_from_content(content: &ToolCallContent) -> Option<String> {
-    match content {
-        ToolCallContent::Content(c) => match &c.content {
-            acp::ContentBlock::Text(text) => Some(text.text.clone()),
-            _ => None,
-        },
-        ToolCallContent::Diff(diff) => Some(format!(
-            "Modified: {:?}\n{} -> {}",
-            diff.path,
-            diff.old_text.as_deref().unwrap_or("<new file>"),
-            diff.new_text
-        )),
-        ToolCallContent::Terminal(terminal) => Some(format!("Terminal: {}", terminal.terminal_id)),
-        _ => None,
-    }
 }
 
 /// Tool call item component based on ACP's ToolCall - stateful version
@@ -133,6 +115,49 @@ impl ToolCallItem {
         !self.tool_call.content.is_empty()
     }
 
+    /// Render content based on type
+    fn render_content(&self, content: &ToolCallContent, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        match content {
+            ToolCallContent::Diff(diff) => {
+                // Use DiffView component for diff content, limited to 10 lines
+                let diff_view = DiffView::new(diff.clone())
+                    .max_lines(10)
+                    .context_lines(3)
+                    .show_file_header(false);  // Hide file header in compact view
+
+                diff_view.render(window, &mut **cx).into_any_element()
+            }
+            ToolCallContent::Content(c) => match &c.content {
+                acp::ContentBlock::Text(text) => {
+                    div()
+                        .text_size(px(12.))
+                        .text_color(cx.theme().muted_foreground)
+                        .line_height(px(18.))
+                        .child(text.text.clone())
+                        .into_any_element()
+                }
+                _ => div()
+                    .text_size(px(12.))
+                    .text_color(cx.theme().muted_foreground)
+                    .child("Unsupported content type")
+                    .into_any_element(),
+            },
+            ToolCallContent::Terminal(terminal) => {
+                div()
+                    .text_size(px(12.))
+                    .text_color(cx.theme().muted_foreground)
+                    .line_height(px(18.))
+                    .child(format!("Terminal: {}", terminal.terminal_id))
+                    .into_any_element()
+            }
+            _ => div()
+                .text_size(px(12.))
+                .text_color(cx.theme().muted_foreground)
+                .child("Unknown content type")
+                .into_any_element(),
+        }
+    }
+
     /// Convert ToolCallStatus to SessionStatus for StatusIndicator
     fn status_to_session_status(&self) -> SessionStatus {
         match self.tool_call.status {
@@ -146,7 +171,7 @@ impl ToolCallItem {
 }
 
 impl Render for ToolCallItem {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let has_content = self.has_content();
         let status_color = match self.tool_call.status {
             ToolCallStatus::Completed => cx.theme().green,
@@ -238,17 +263,18 @@ impl Render for ToolCallItem {
             )
             // Content - only visible when open and has content
             .when(has_content, |this| {
-                this.content(v_flex().gap_1().p_3().pl_8().children(
-                    self.tool_call.content.iter().filter_map(|content| {
-                        extract_text_from_content(content).map(|text| {
-                            div()
-                                .text_size(px(12.))
-                                .text_color(cx.theme().muted_foreground)
-                                .line_height(px(18.))
-                                .child(text)
-                        })
-                    }),
-                ))
+                this.content(
+                    v_flex()
+                        .gap_2()
+                        .p_3()
+                        .pl_8()
+                        .children(
+                            self.tool_call
+                                .content
+                                .iter()
+                                .map(|content| self.render_content(content, window, cx)),
+                        ),
+                )
             })
     }
 }

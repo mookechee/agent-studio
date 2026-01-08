@@ -1,6 +1,6 @@
 /// UI Components for ConversationPanel
 use gpui::{
-    Context, Entity, IntoElement, ParentElement, Render, SharedString, Styled, Window, div,
+    AnyElement, Context, Entity, IntoElement, ParentElement, Render, RenderOnce, SharedString, Styled, Window, div,
     prelude::*, px,
 };
 use gpui_component::{
@@ -19,6 +19,7 @@ use similar::{ChangeTag, TextDiff};
 use super::helpers::extract_xml_content;
 use super::types::{ResourceInfo, ToolCallStatusExt, ToolKindExt, get_file_icon};
 use crate::{ShowToolCallDetail, UserMessageData};
+use crate::components::DiffView;
 
 // ============================================================================
 // Diff Statistics
@@ -357,10 +358,54 @@ impl ToolCallItemState {
         // Fallback to original title
         self.tool_call.title.clone()
     }
+
+    /// Render content based on type
+    fn render_content(&self, content: &ToolCallContent, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        match content {
+            ToolCallContent::Diff(diff) => {
+                // Use DiffView component for diff content, limited to 10 lines
+                let diff_view = DiffView::new(diff.clone())
+                    .max_lines(20)
+                    .context_lines(3)
+                    .show_file_header(false);  // Hide file header in compact view
+
+                diff_view.render(window, &mut **cx).into_any_element()
+            }
+            ToolCallContent::Content(c) => match &c.content {
+                ContentBlock::Text(text) => {
+                    let cleaned_text = extract_xml_content(&text.text, &self.tool_call.kind);
+                    div()
+                        .text_size(px(12.))
+                        .text_color(cx.theme().muted_foreground)
+                        .line_height(px(18.))
+                        .child(cleaned_text)
+                        .into_any_element()
+                }
+                _ => div()
+                    .text_size(px(12.))
+                    .text_color(cx.theme().muted_foreground)
+                    .child("Unsupported content type")
+                    .into_any_element(),
+            },
+            ToolCallContent::Terminal(terminal) => {
+                div()
+                    .text_size(px(12.))
+                    .text_color(cx.theme().muted_foreground)
+                    .line_height(px(18.))
+                    .child(format!("Terminal: {}", terminal.terminal_id))
+                    .into_any_element()
+            }
+            _ => div()
+                .text_size(px(12.))
+                .text_color(cx.theme().muted_foreground)
+                .child("Unknown content type")
+                .into_any_element(),
+        }
+    }
 }
 
 impl Render for ToolCallItemState {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let has_content = self.has_content();
         let status_color = match self.tool_call.status {
             ToolCallStatus::Completed => cx.theme().green,
@@ -475,47 +520,15 @@ impl Render for ToolCallItemState {
             .when(has_content, |this| {
                 this.content(
                     v_flex()
-                        .gap_1()
+                        .gap_2()
                         .p_3()
                         .pl_8()
-                        .children(self.tool_call.content.iter().filter_map(|content| {
-                            match content {
-                                ToolCallContent::Content(c) => match &c.content {
-                                    ContentBlock::Text(text) => {
-                                        let cleaned_text =
-                                            extract_xml_content(&text.text, &self.tool_call.kind);
-                                        Some(
-                                            div()
-                                                .text_size(px(12.))
-                                                .text_color(cx.theme().muted_foreground)
-                                                .line_height(px(18.))
-                                                .child(cleaned_text),
-                                        )
-                                    }
-                                    _ => None,
-                                },
-                                ToolCallContent::Diff(diff) => Some(
-                                    div()
-                                        .text_size(px(12.))
-                                        .text_color(cx.theme().muted_foreground)
-                                        .line_height(px(18.))
-                                        .child(format!(
-                                            "Modified: {}\n{} -> {}",
-                                            diff.path.display(),
-                                            diff.old_text.as_deref().unwrap_or("<new file>"),
-                                            diff.new_text
-                                        )),
-                                ),
-                                ToolCallContent::Terminal(terminal) => Some(
-                                    div()
-                                        .text_size(px(12.))
-                                        .text_color(cx.theme().muted_foreground)
-                                        .line_height(px(18.))
-                                        .child(format!("Terminal: {}", terminal.terminal_id)),
-                                ),
-                                _ => None,
-                            }
-                        })),
+                        .children(
+                            self.tool_call
+                                .content
+                                .iter()
+                                .map(|content| self.render_content(content, window, cx)),
+                        ),
                 )
                 .max_h(px(180.)) // Max 10 lines (18px * 10)
                 .overflow_hidden()
