@@ -8,159 +8,179 @@ use gpui_component::{
     setting::{SettingGroup, SettingItem, SettingPage},
     v_flex,
 };
+use rust_i18n::t;
 
 use super::panel::SettingsPanel;
 use crate::AppState;
 
 impl SettingsPanel {
     pub fn prompt_page(&self, view: &Entity<Self>) -> SettingPage {
-        SettingPage::new("Prompts").resettable(false).groups(vec![
-            // Default AI Model Selection
-            SettingGroup::new()
-                .title("Default AI Model")
-                .description("Select the default model for AI code assistance features")
-                .item(SettingItem::render({
-                    let view = view.clone();
-                    move |_options, _window, cx| {
-                        let model_configs = view.read(cx).cached_models.clone();
-                        let ai_service = AppState::global(cx).ai_service();
+        SettingPage::new(t!("settings.prompts.title").to_string())
+            .resettable(false)
+            .groups(vec![
+                // Default AI Model Selection
+                SettingGroup::new()
+                    .title(t!("settings.prompts.default.title").to_string())
+                    .description(t!("settings.prompts.default.description").to_string())
+                    .item(SettingItem::render({
+                        let view = view.clone();
+                        move |_options, _window, cx| {
+                            let model_configs = view.read(cx).cached_models.clone();
+                            let ai_service = AppState::global(cx).ai_service();
 
-                        let default_model = if let Some(service) = ai_service {
-                            service.config.read().unwrap().default_model.clone()
-                        } else {
-                            None
-                        };
+                            let default_model = if let Some(service) = ai_service {
+                                service.config.read().unwrap().default_model.clone()
+                            } else {
+                                None
+                            };
 
-                        if model_configs.is_empty() {
-                            return v_flex()
-                                .w_full()
-                                .child(
-                                    Label::new("No models configured. Add a model in the Models page to enable AI features.")
+                            if model_configs.is_empty() {
+                                return v_flex().w_full().child(
+                                    Label::new(t!("settings.prompts.default.empty").to_string())
                                         .text_sm()
-                                        .text_color(cx.theme().muted_foreground)
+                                        .text_color(cx.theme().muted_foreground),
                                 );
-                        }
-
-                        let mut options_flex = h_flex().w_full().gap_2().flex_wrap();
-
-                        let mut idx: usize = 0;
-                        for (name, config) in model_configs.iter() {
-                            if !config.enabled {
-                                continue;
                             }
 
-                            let is_default = default_model.as_ref() == Some(name);
-                            let name_clone = name.clone();
+                            let mut options_flex = h_flex().w_full().gap_2().flex_wrap();
 
-                            options_flex = options_flex.child(
-                                Button::new(("default-model-btn-prompt", idx))
-                                    .label(name.clone())
-                                    .when(is_default, |btn| btn.icon(IconName::Check))
-                                    .when(!is_default, |btn| btn.outline())
-                                    .small()
-                                    .on_click({
-                                        let view = view.clone();
-                                        move |_, _window, cx| {
-                                            view.update(cx, |this, cx| {
-                                                this.set_default_model(name_clone.clone(), cx);
-                                            });
-                                        }
-                                    })
-                            );
+                            let mut idx: usize = 0;
+                            for (name, config) in model_configs.iter() {
+                                if !config.enabled {
+                                    continue;
+                                }
 
-                            idx += 1;
+                                let is_default = default_model.as_ref() == Some(name);
+                                let name_clone = name.clone();
+
+                                options_flex = options_flex.child(
+                                    Button::new(("default-model-btn-prompt", idx))
+                                        .label(name.clone())
+                                        .when(is_default, |btn| btn.icon(IconName::Check))
+                                        .when(!is_default, |btn| btn.outline())
+                                        .small()
+                                        .on_click({
+                                            let view = view.clone();
+                                            move |_, _window, cx| {
+                                                view.update(cx, |this, cx| {
+                                                    this.set_default_model(name_clone.clone(), cx);
+                                                });
+                                            }
+                                        }),
+                                );
+
+                                idx += 1;
+                            }
+
+                            v_flex().w_full().gap_2().child(options_flex)
                         }
+                    })),
+                // System Prompts Configuration
+                SettingGroup::new()
+                    .title(t!("settings.prompts.system.title").to_string())
+                    .description(t!("settings.prompts.system.description").to_string())
+                    .item(SettingItem::render({
+                        let view = view.clone();
+                        move |_options, _window, cx| {
+                            // Read current prompt values from panel's InputStates
+                            let doc_comment_state = view.read(cx).doc_comment_input.clone();
+                            let inline_comment_state = view.read(cx).inline_comment_input.clone();
+                            let explain_state = view.read(cx).explain_input.clone();
+                            let improve_state = view.read(cx).improve_input.clone();
 
-                        v_flex().w_full().gap_2().child(options_flex)
-                    }
-                })),
-            // System Prompts Configuration
-            SettingGroup::new()
-                .title("System Prompts")
-                .description("Customize AI behavior for different features. Edit in the input fields and click Save.")
-                .item(SettingItem::render({
-                    let view = view.clone();
-                    move |_options, _window, cx| {
-                        // Read current prompt values from panel's InputStates
-                        let doc_comment_state = view.read(cx).doc_comment_input.clone();
-                        let inline_comment_state = view.read(cx).inline_comment_input.clone();
-                        let explain_state = view.read(cx).explain_input.clone();
-                        let improve_state = view.read(cx).improve_input.clone();
-
-                        v_flex()
-                            .w_full()
-                            .gap_4()
-                            .child(
-                                v_flex()
-                                    .w_full()
-                                    .gap_2()
-                                    .child(
-                                        Label::new("Documentation Comment Prompt")
+                            v_flex()
+                                .w_full()
+                                .gap_4()
+                                .child(
+                                    v_flex()
+                                        .w_full()
+                                        .gap_2()
+                                        .child(
+                                            Label::new(
+                                                t!("settings.prompts.system.doc.label").to_string(),
+                                            )
                                             .text_sm()
-                                            .font_weight(gpui::FontWeight::SEMIBOLD)
-                                    )
-                                    .child(
-                                        Label::new("Used when generating function/class documentation comments")
+                                            .font_weight(gpui::FontWeight::SEMIBOLD),
+                                        )
+                                        .child(
+                                            Label::new(
+                                                t!("settings.prompts.system.doc.help").to_string(),
+                                            )
                                             .text_xs()
-                                            .text_color(cx.theme().muted_foreground)
-                                    )
-                                    .child(Input::new(&doc_comment_state))
-                            )
-                            .child(
-                                v_flex()
-                                    .w_full()
-                                    .gap_2()
-                                    .child(
-                                        Label::new("Inline Comment Prompt")
+                                            .text_color(cx.theme().muted_foreground),
+                                        )
+                                        .child(Input::new(&doc_comment_state)),
+                                )
+                                .child(
+                                    v_flex()
+                                        .w_full()
+                                        .gap_2()
+                                        .child(
+                                            Label::new(
+                                                t!("settings.prompts.system.inline.label")
+                                                    .to_string(),
+                                            )
                                             .text_sm()
-                                            .font_weight(gpui::FontWeight::SEMIBOLD)
-                                    )
-                                    .child(
-                                        Label::new("Used when generating brief inline comments")
+                                            .font_weight(gpui::FontWeight::SEMIBOLD),
+                                        )
+                                        .child(
+                                            Label::new(
+                                                t!("settings.prompts.system.inline.help")
+                                                    .to_string(),
+                                            )
                                             .text_xs()
-                                            .text_color(cx.theme().muted_foreground)
-                                    )
-                                    .child(Input::new(&inline_comment_state))
-                            )
-                            .child(
-                                v_flex()
-                                    .w_full()
-                                    .gap_2()
-                                    .child(
-                                        Label::new("Code Explanation Prompt")
+                                            .text_color(cx.theme().muted_foreground),
+                                        )
+                                        .child(Input::new(&inline_comment_state)),
+                                )
+                                .child(
+                                    v_flex()
+                                        .w_full()
+                                        .gap_2()
+                                        .child(
+                                            Label::new(
+                                                t!("settings.prompts.system.explain.label")
+                                                    .to_string(),
+                                            )
                                             .text_sm()
-                                            .font_weight(gpui::FontWeight::SEMIBOLD)
-                                    )
-                                    .child(
-                                        Label::new("Used when explaining what code does")
+                                            .font_weight(gpui::FontWeight::SEMIBOLD),
+                                        )
+                                        .child(
+                                            Label::new(
+                                                t!("settings.prompts.system.explain.help")
+                                                    .to_string(),
+                                            )
                                             .text_xs()
-                                            .text_color(cx.theme().muted_foreground)
-                                    )
-                                    .child(Input::new(&explain_state))
-                            )
-                            .child(
-                                v_flex()
-                                    .w_full()
-                                    .gap_2()
-                                    .child(
-                                        Label::new("Code Improvement Prompt")
+                                            .text_color(cx.theme().muted_foreground),
+                                        )
+                                        .child(Input::new(&explain_state)),
+                                )
+                                .child(
+                                    v_flex()
+                                        .w_full()
+                                        .gap_2()
+                                        .child(
+                                            Label::new(
+                                                t!("settings.prompts.system.improve.label")
+                                                    .to_string(),
+                                            )
                                             .text_sm()
-                                            .font_weight(gpui::FontWeight::SEMIBOLD)
-                                    )
-                                    .child(
-                                        Label::new("Used when suggesting code improvements")
+                                            .font_weight(gpui::FontWeight::SEMIBOLD),
+                                        )
+                                        .child(
+                                            Label::new(
+                                                t!("settings.prompts.system.improve.help")
+                                                    .to_string(),
+                                            )
                                             .text_xs()
-                                            .text_color(cx.theme().muted_foreground)
-                                    )
-                                    .child(Input::new(&improve_state))
-                            )
-                            .child(
-                                h_flex()
-                                    .w_full()
-                                    .justify_end()
-                                    .child(
+                                            .text_color(cx.theme().muted_foreground),
+                                        )
+                                        .child(Input::new(&improve_state)),
+                                )
+                                .child(
+                                    h_flex().w_full().justify_end().child(
                                         Button::new("save-prompts-btn")
-                                            .label("Save Changes")
+                                            .label(t!("settings.prompts.button.save").to_string())
                                             .icon(IconName::Check)
                                             .small()
                                             .on_click({
@@ -170,12 +190,12 @@ impl SettingsPanel {
                                                         this.save_system_prompts(cx);
                                                     });
                                                 }
-                                            })
-                                    )
-                            )
-                    }
-                })),
-        ])
+                                            }),
+                                    ),
+                                )
+                        }
+                    })),
+            ])
     }
 
     pub fn save_system_prompts(&mut self, cx: &mut Context<Self>) {

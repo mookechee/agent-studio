@@ -11,6 +11,7 @@ use gpui_component::{
 // Use the published ACP schema crate
 use agent_client_protocol::{ContentChunk, ImageContent, SessionUpdate, ToolCall};
 use chrono::{DateTime, Utc};
+use rust_i18n::t;
 use std::time::Duration;
 
 use crate::components::ToolCallItem;
@@ -955,25 +956,22 @@ impl ConversationPanel {
 
     /// Render the loading skeleton when session is in progress
     fn render_loading_skeleton(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        v_flex()
-            .gap_3()
-            .w_full()
-            .child(
-                h_flex()
-                    .items_start()
-                    .gap_2()
-                    // Agent icon skeleton (circular, same size as agent icon)
-                    .child(Skeleton::new().size(px(16.)).rounded_full().mt_1())
-                    // Message content skeleton (2-3 lines with different widths)
-                    .child(
-                        v_flex()
-                            .w_full()
-                            .gap_2()
-                            .child(Skeleton::new().w(px(300.)).h_4().rounded_md())
-                            .child(Skeleton::new().w(px(250.)).h_4().rounded_md())
-                            .child(Skeleton::new().w(px(200.)).h_4().rounded_md()),
-                    ),
-            )
+        v_flex().gap_3().w_full().child(
+            h_flex()
+                .items_start()
+                .gap_2()
+                // Agent icon skeleton (circular, same size as agent icon)
+                .child(Skeleton::new().size(px(16.)).rounded_full().mt_1())
+                // Message content skeleton (2-3 lines with different widths)
+                .child(
+                    v_flex()
+                        .w_full()
+                        .gap_2()
+                        .child(Skeleton::new().w(px(300.)).h_4().rounded_md())
+                        .child(Skeleton::new().w(px(250.)).h_4().rounded_md())
+                        .child(Skeleton::new().w(px(200.)).h_4().rounded_md()),
+                ),
+        )
     }
 
     /// Render the status bar at the bottom of the conversation panel
@@ -1236,7 +1234,7 @@ impl Render for ConversationPanel {
                                     div()
                                         .text_color(cx.theme().muted_foreground)
                                         .text_sm()
-                                        .child("暂无消息"),
+                                        .child(t!("conversation.empty").to_string()),
                                 ),
                         )
                     })

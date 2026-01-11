@@ -18,6 +18,11 @@ category = "Developer Tool"
 short_description = "AI Agent Studio"
 long_description = "A full-featured desktop AI agent studio built with GPUI Component, featuring real-time agent communication, code editing, and multi-session management."
 
+[package.metadata.i18n]
+available-locales = ["en", "zh-CN"]
+default-locale = "en"
+load-path = "locales"
+
 [[bin]]
 name = "agentx"
 path = "src/main.rs"

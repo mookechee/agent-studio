@@ -47,6 +47,8 @@ pub struct AppState {
     tool_call_preview_max_lines: usize,
     /// Selected tool call for detail view
     pub selected_tool_call: Entity<Option<agent_client_protocol::ToolCall>>,
+    /// Cached title for rebuilding app menus after locale changes
+    app_title: SharedString,
 }
 
 impl AppState {
@@ -85,6 +87,7 @@ impl AppState {
             current_working_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             tool_call_preview_max_lines: DEFAULT_TOOL_CALL_PREVIEW_MAX_LINES,
             selected_tool_call: cx.new(|_| None),
+            app_title: SharedString::from(""),
         };
         cx.set_global::<AppState>(state);
     }
@@ -172,6 +175,14 @@ impl AppState {
     pub fn set_permission_store(&mut self, store: Arc<PermissionStore>) {
         log::info!("Setting PermissionStore");
         self.permission_store = Some(store);
+    }
+
+    pub fn set_app_title(&mut self, title: SharedString) {
+        self.app_title = title;
+    }
+
+    pub fn app_title(&self) -> &SharedString {
+        &self.app_title
     }
 
     /// Get a reference to the AgentManager if initialized

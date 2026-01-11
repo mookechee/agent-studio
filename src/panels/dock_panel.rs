@@ -10,6 +10,7 @@ use gpui_component::{
     notification::Notification,
 };
 
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 
 use crate::panels::conversation::ConversationPanel;
@@ -109,6 +110,7 @@ pub fn section(title: impl Into<SharedString>) -> DockPanelSection {
 pub struct DockPanelContainer {
     pub focus_handle: gpui::FocusHandle,
     pub name: SharedString,
+    pub title_key: Option<SharedString>,
     pub title_bg: Option<Hsla>,
     pub description: SharedString,
     pub width: Option<gpui::Pixels>,
@@ -132,6 +134,10 @@ pub trait DockPanel: Render + Sized {
     }
 
     fn title() -> &'static str;
+
+    fn title_key() -> Option<&'static str> {
+        None
+    }
 
     fn description() -> &'static str {
         ""
@@ -182,6 +188,7 @@ impl DockPanelContainer {
         Self {
             focus_handle,
             name: "".into(),
+            title_key: None,
             title_bg: None,
             description: "".into(),
             width: None,
@@ -197,6 +204,7 @@ impl DockPanelContainer {
 
     pub fn panel<S: DockPanel>(window: &mut Window, cx: &mut App) -> Entity<Self> {
         let name = S::title();
+        let title_key = S::title_key();
         let description = S::description();
         let story = S::new_view(window, cx);
         let story_klass = S::klass();
@@ -209,6 +217,7 @@ impl DockPanelContainer {
             story.closable = S::closable();
             story.zoomable = S::zoomable();
             story.name = name.into();
+            story.title_key = title_key.map(SharedString::from);
             story.description = description.into();
             story.title_bg = S::title_bg();
             story.paddings = S::paddings();
@@ -224,6 +233,7 @@ impl DockPanelContainer {
         cx: &mut App,
     ) -> Entity<Self> {
         let name = ToolCallDetailPanel::title();
+        let title_key = ToolCallDetailPanel::title_key();
         let description = ToolCallDetailPanel::description();
         let mut story = ToolCallDetailPanel::new(window, cx);
         let story_klass = ToolCallDetailPanel::klass();
@@ -239,6 +249,7 @@ impl DockPanelContainer {
             container.closable = ToolCallDetailPanel::closable();
             container.zoomable = ToolCallDetailPanel::zoomable();
             container.name = name.into();
+            container.title_key = title_key.map(SharedString::from);
             container.description = description.into();
             container.title_bg = ToolCallDetailPanel::title_bg();
             container.paddings = ToolCallDetailPanel::paddings();
@@ -255,6 +266,7 @@ impl DockPanelContainer {
         cx: &mut App,
     ) -> Entity<Self> {
         let name = ConversationPanel::title();
+        let title_key = ConversationPanel::title_key();
         let description = ConversationPanel::description();
         let story = ConversationPanel::view_for_session(session_id, window, cx);
         let story_klass = ConversationPanel::klass();
@@ -267,6 +279,7 @@ impl DockPanelContainer {
             container.closable = ConversationPanel::closable();
             container.zoomable = ConversationPanel::zoomable();
             container.name = name.into();
+            container.title_key = title_key.map(SharedString::from);
             container.description = description.into();
             container.title_bg = ConversationPanel::title_bg();
             container.paddings = ConversationPanel::paddings();
@@ -283,6 +296,7 @@ impl DockPanelContainer {
         cx: &mut Context<Self>,
     ) {
         let name = ConversationPanel::title();
+        let title_key = ConversationPanel::title_key();
         let description = ConversationPanel::description();
         let story = match session_id {
             Some(session_id) => ConversationPanel::view_for_session(session_id, window, cx),
@@ -296,6 +310,7 @@ impl DockPanelContainer {
         self.closable = ConversationPanel::closable();
         self.zoomable = ConversationPanel::zoomable();
         self.name = name.into();
+        self.title_key = title_key.map(SharedString::from);
         self.description = description.into();
         self.title_bg = ConversationPanel::title_bg();
         self.paddings = ConversationPanel::paddings();
@@ -310,6 +325,7 @@ impl DockPanelContainer {
         cx: &mut App,
     ) -> Entity<Self> {
         let name = WelcomePanel::title();
+        let title_key = WelcomePanel::title_key();
         let description = WelcomePanel::description();
         let story = WelcomePanel::view_for_workspace(workspace_id, window, cx);
         let story_klass = WelcomePanel::klass();
@@ -322,6 +338,7 @@ impl DockPanelContainer {
             container.closable = WelcomePanel::closable();
             container.zoomable = WelcomePanel::zoomable();
             container.name = name.into();
+            container.title_key = title_key.map(SharedString::from);
             container.description = description.into();
             container.title_bg = WelcomePanel::title_bg();
             container.paddings = WelcomePanel::paddings();
@@ -414,7 +431,12 @@ impl Panel for DockPanelContainer {
         _window: &mut gpui::Window,
         _cx: &mut gpui::Context<'_, DockPanelContainer>,
     ) -> impl gpui::IntoElement {
-        self.name.clone().into_any_element()
+        let title = if let Some(key) = &self.title_key {
+            SharedString::from(t!(key.as_ref()).to_string())
+        } else {
+            self.name.clone()
+        };
+        title.into_any_element()
     }
 
     fn title_style(&self, cx: &App) -> Option<TitleStyle> {

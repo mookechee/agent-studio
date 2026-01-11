@@ -20,6 +20,7 @@ use gpui_component::{
     scroll::ScrollableElement as _,
     v_flex,
 };
+use rust_i18n::t;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
@@ -80,6 +81,10 @@ pub struct TaskPanel {
 impl DockPanel for TaskPanel {
     fn title() -> &'static str {
         "任务"
+    }
+
+    fn title_key() -> Option<&'static str> {
+        Some("task_panel.title")
     }
 
     fn description() -> &'static str {
@@ -599,9 +604,10 @@ impl TaskPanel {
                 return;
             }
         };
+        let dialog_title = t!("task_panel.dialog.select_workspace_folder").to_string();
 
         cx.spawn(async move |entity, cx| {
-            if let Some(folder_path) = utils::pick_folder("选择工作区文件夹").await {
+            if let Some(folder_path) = utils::pick_folder(&dialog_title).await {
                 log::info!("Selected folder: {:?}", folder_path);
 
                 match workspace_service.add_workspace(folder_path.clone()).await {
@@ -921,7 +927,7 @@ impl TaskPanel {
                     .ghost()
                     .small()
                     .icon(IconName::FolderOpen)
-                    .label("添加工作区")
+                    .label(t!("task_panel.footer.add_workspace").to_string())
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.add_workspace(cx);
                     })),
@@ -984,7 +990,7 @@ impl TaskPanel {
                             div()
                                 .text_sm()
                                 .text_color(theme.muted_foreground)
-                                .child("加载中..."),
+                                .child(t!("task_panel.loading").to_string()),
                         ),
                 )
             })
@@ -1081,16 +1087,20 @@ impl TaskPanel {
                                         let workspace_id = workspace_id.clone();
                                         let entity = entity.clone();
                                         menu.item(
-                                            PopupMenuItem::new("移除工作区")
-                                                .icon(Icon::new(crate::assets::Icon::Trash2))
-                                                .on_click(move |_, _, cx| {
+                                            PopupMenuItem::new(
+                                                t!("task_panel.workspace.remove").to_string(),
+                                            )
+                                            .icon(Icon::new(crate::assets::Icon::Trash2))
+                                            .on_click(
+                                                move |_, _, cx| {
                                                     entity.update(cx, |this, cx| {
                                                         this.remove_workspace(
                                                             workspace_id.clone(),
                                                             cx,
                                                         );
                                                     });
-                                                }),
+                                                },
+                                            ),
                                         )
                                     },
                                 )
@@ -1142,7 +1152,7 @@ impl TaskPanel {
                 div()
                     .text_sm()
                     .text_color(theme.muted_foreground)
-                    .child("新建任务"),
+                    .child(t!("task_panel.task.new").to_string()),
             )
     }
 
@@ -1250,7 +1260,7 @@ impl TaskPanel {
                 let task_id = task_id.clone();
                 let entity = entity.clone();
                 menu.item(
-                    PopupMenuItem::new("删除任务")
+                    PopupMenuItem::new(t!("task_panel.task.delete").to_string())
                         .icon(Icon::new(crate::assets::Icon::Trash2))
                         .on_click(move |_, _, cx| {
                             entity.update(cx, |this, cx| {
@@ -1300,19 +1310,34 @@ impl TaskPanel {
             .min_h_0()
             .overflow_y_scrollbar()
             .when(!today.is_empty(), |this| {
-                this.child(self.render_time_group("今天", &today, entity.clone(), cx))
+                this.child(self.render_time_group(
+                    t!("task_panel.group.today").to_string(),
+                    &today,
+                    entity.clone(),
+                    cx,
+                ))
             })
             .when(!yesterday.is_empty(), |this| {
-                this.child(self.render_time_group("昨天", &yesterday, entity.clone(), cx))
+                this.child(self.render_time_group(
+                    t!("task_panel.group.yesterday").to_string(),
+                    &yesterday,
+                    entity.clone(),
+                    cx,
+                ))
             })
             .when(!older.is_empty(), |this| {
-                this.child(self.render_time_group("更早", &older, entity.clone(), cx))
+                this.child(self.render_time_group(
+                    t!("task_panel.group.older").to_string(),
+                    &older,
+                    entity.clone(),
+                    cx,
+                ))
             })
     }
 
     fn render_time_group(
         &self,
-        label: &str,
+        label: String,
         tasks: &[&Rc<WorkspaceTask>],
         entity: Entity<Self>,
         cx: &Context<Self>,
@@ -1433,7 +1458,7 @@ impl TaskPanel {
                 let task_id = task_id.clone();
                 let entity = entity.clone();
                 menu.item(
-                    PopupMenuItem::new("删除任务")
+                    PopupMenuItem::new(t!("task_panel.task.delete").to_string())
                         .icon(Icon::new(crate::assets::Icon::Trash2))
                         .on_click(move |_, _, cx| {
                             entity.update(cx, |this, cx| {
@@ -1460,30 +1485,30 @@ impl TaskPanel {
         let days = duration.num_days();
 
         if minutes < 1 {
-            "刚刚".to_string()
+            t!("task_panel.time.just_now").to_string()
         } else if minutes < 60 {
-            format!("{}分钟前", minutes)
+            t!("task_panel.time.minutes_ago", minutes = minutes).to_string()
         } else if hours < 24 {
-            format!("{}小时前", hours)
+            t!("task_panel.time.hours_ago", hours = hours).to_string()
         } else if days == 1 {
-            "昨天".to_string()
+            t!("task_panel.time.yesterday").to_string()
         } else if days == 2 {
-            "前天".to_string()
+            t!("task_panel.time.day_before_yesterday").to_string()
         } else if days < 7 {
-            format!("{}天前", days)
+            t!("task_panel.time.days_ago", days = days).to_string()
         } else if days < 30 {
             let weeks = days / 7;
             if weeks == 1 {
-                "一周前".to_string()
+                t!("task_panel.time.one_week_ago").to_string()
             } else {
-                format!("{}周前", weeks)
+                t!("task_panel.time.weeks_ago", weeks = weeks).to_string()
             }
         } else if days < 365 {
             let months = days / 30;
-            format!("{}个月前", months)
+            t!("task_panel.time.months_ago", months = months).to_string()
         } else {
             let years = days / 365;
-            format!("{}年前", years)
+            t!("task_panel.time.years_ago", years = years).to_string()
         }
     }
 
@@ -1494,13 +1519,34 @@ impl TaskPanel {
     fn render_status_badge(&self, status: &SessionStatus, cx: &Context<Self>) -> impl IntoElement {
         let theme = cx.theme();
         let (label, color) = match status {
-            SessionStatus::Active => ("待输入", theme.muted_foreground),
-            SessionStatus::Idle => ("等待中", theme.muted_foreground),
-            SessionStatus::Pending => ("进行中", theme.muted_foreground),
-            SessionStatus::InProgress => ("进行中", gpui::rgb(0x22c55e).into()),
-            SessionStatus::Completed => ("已完成", gpui::rgb(0x22c55e).into()),
-            SessionStatus::Failed => ("失败", gpui::rgb(0xef4444).into()),
-            SessionStatus::Closed => ("关闭", gpui::rgb(0xef4444).into()),
+            SessionStatus::Active => (
+                t!("task_panel.status.active").to_string(),
+                theme.muted_foreground,
+            ),
+            SessionStatus::Idle => (
+                t!("task_panel.status.idle").to_string(),
+                theme.muted_foreground,
+            ),
+            SessionStatus::Pending => (
+                t!("task_panel.status.pending").to_string(),
+                theme.muted_foreground,
+            ),
+            SessionStatus::InProgress => (
+                t!("task_panel.status.in_progress").to_string(),
+                gpui::rgb(0x22c55e).into(),
+            ),
+            SessionStatus::Completed => (
+                t!("task_panel.status.completed").to_string(),
+                gpui::rgb(0x22c55e).into(),
+            ),
+            SessionStatus::Failed => (
+                t!("task_panel.status.failed").to_string(),
+                gpui::rgb(0xef4444).into(),
+            ),
+            SessionStatus::Closed => (
+                t!("task_panel.status.closed").to_string(),
+                gpui::rgb(0xef4444).into(),
+            ),
         };
 
         div().text_xs().text_color(color).child(label)

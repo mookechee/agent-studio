@@ -12,6 +12,8 @@ pub struct AppSettings {
     pub cli_path: SharedString,
     pub font_family: SharedString,
     pub font_size: f64,
+    #[serde(default = "default_locale")]
+    pub locale: SharedString,
     pub line_height: f64,
     pub notifications_enabled: bool,
     pub auto_update: bool,
@@ -38,6 +40,7 @@ impl Default for AppSettings {
             cli_path: "/usr/local/bin/bash".into(),
             font_family: "Arial".into(),
             font_size: 14.0,
+            locale: default_locale(),
             line_height: 12.0,
             notifications_enabled: true,
             auto_update: true,
@@ -51,6 +54,10 @@ impl Default for AppSettings {
 }
 
 impl Global for AppSettings {}
+
+fn default_locale() -> SharedString {
+    "en".into()
+}
 
 impl AppSettings {
     pub fn global(cx: &App) -> &AppSettings {

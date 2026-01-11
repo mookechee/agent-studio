@@ -2,6 +2,7 @@ use gpui::{
     App, AppContext, ClipboardEntry, Context, Entity, FocusHandle, Focusable, InteractiveElement,
     IntoElement, ParentElement, Render, SharedString, Styled, Subscription, Window, px,
 };
+use rust_i18n::t;
 use std::collections::HashSet;
 
 use gpui_component::{
@@ -88,6 +89,26 @@ impl crate::panels::dock_panel::DockPanel for WelcomePanel {
 }
 
 impl WelcomePanel {
+    fn loading_agents_label() -> String {
+        t!("welcome.agent.loading").to_string()
+    }
+
+    fn no_agents_label() -> String {
+        t!("welcome.agent.none").to_string()
+    }
+
+    fn no_sessions_label() -> String {
+        t!("welcome.session.none").to_string()
+    }
+
+    fn creating_session_label() -> String {
+        t!("welcome.session.creating").to_string()
+    }
+
+    fn session_label(short_id: &str) -> String {
+        t!("welcome.session.item", id = short_id).to_string()
+    }
+
     pub fn view(window: &mut Window, cx: &mut App) -> Entity<Self> {
         Self::view_internal(None, window, cx)
     }
@@ -277,7 +298,7 @@ impl WelcomePanel {
                 .multi_line(true)
                 .auto_grow(2, 8) // Auto-grow from 2 to 8 rows
                 .soft_wrap(true) // Enable word wrapping
-                .placeholder("Describe what you'd like to build...")
+                .placeholder(t!("welcome.input.placeholder").to_string())
         });
 
         // Get the current working directory for file picker
@@ -295,7 +316,7 @@ impl WelcomePanel {
 
         // Get available agents from AppState - we'll load them asynchronously
         // For now, start with placeholder
-        let agent_list = vec![AgentItem::new("Loading agents...")];
+        let agent_list = vec![AgentItem::new(Self::loading_agents_label())];
         let agent_select = cx.new(|cx| SelectState::new(agent_list, None, window, cx));
 
         let has_agents = false; // Will be updated after async load
@@ -303,7 +324,7 @@ impl WelcomePanel {
 
         // Initialize session selector (initially empty)
         let session_select =
-            cx.new(|cx| SelectState::new(vec!["No sessions".to_string()], None, window, cx));
+            cx.new(|cx| SelectState::new(vec![Self::no_sessions_label()], None, window, cx));
 
         let mut panel = Self {
             focus_handle: cx.focus_handle(),
@@ -542,12 +563,13 @@ impl WelcomePanel {
 
     /// Handle agent selection change - refresh sessions for the newly selected agent
     fn on_agent_changed(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let no_agents_label = Self::no_agents_label();
         let agent_name = match self.agent_select.read(cx).selected_value().cloned() {
-            Some(name) if name != "No agents" => name,
+            Some(name) if name != no_agents_label => name,
             _ => {
                 // No valid agent selected, clear sessions
                 self.session_select.update(cx, |state, cx| {
-                    state.set_items(vec!["No sessions".to_string()], window, cx);
+                    state.set_items(vec![Self::no_sessions_label()], window, cx);
                     state.set_selected_index(None, window, cx);
                 });
                 self.current_agent_name = None;
@@ -569,11 +591,12 @@ impl WelcomePanel {
     }
 
     fn on_mcp_selection_changed(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let no_agents_label = Self::no_agents_label();
         let agent_name = self
             .current_agent_name
             .clone()
             .or_else(|| self.agent_select.read(cx).selected_value().cloned())
-            .filter(|name| name != "No agents");
+            .filter(|name| name != &no_agents_label);
 
         if let Some(agent_name) = agent_name {
             self.current_agent_name = Some(agent_name.clone());
@@ -583,8 +606,9 @@ impl WelcomePanel {
 
     /// Handle session selection change - update welcome_session
     fn on_session_changed(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let no_agents_label = Self::no_agents_label();
         let agent_name = match self.agent_select.read(cx).selected_value().cloned() {
-            Some(name) if name != "No agents" => name,
+            Some(name) if name != no_agents_label => name,
             _ => return,
         };
 
@@ -626,6 +650,7 @@ impl WelcomePanel {
 
     /// Handle mode selection change - send SetSessionMode command to agent
     fn on_mode_changed(&mut self, cx: &mut Context<Self>) {
+        let no_agents_label = Self::no_agents_label();
         // Get the selected mode
         let mode = match self.mode_select.read(cx).selected_value() {
             Some(m) => m.clone(),
@@ -643,7 +668,7 @@ impl WelcomePanel {
 
         // Get the agent name
         let agent_name = match self.agent_select.read(cx).selected_value().cloned() {
-            Some(name) if name != "No agents" => name,
+            Some(name) if name != no_agents_label => name,
             _ => {
                 log::debug!("[WelcomePanel] Cannot change mode: no agent selected");
                 return;
@@ -710,6 +735,7 @@ impl WelcomePanel {
 
     /// Handle model selection change - send SetSessionModel command to agent
     fn on_model_changed(&mut self, cx: &mut Context<Self>) {
+        let no_agents_label = Self::no_agents_label();
         // Get the selected model ID
         let model_id = match self.model_select.read(cx).selected_value() {
             Some(model) => model.clone(),
@@ -727,7 +753,7 @@ impl WelcomePanel {
 
         // Get the agent name
         let agent_name = match self.agent_select.read(cx).selected_value().cloned() {
-            Some(name) if name != "No agents" => name,
+            Some(name) if name != no_agents_label => name,
             _ => {
                 log::debug!("[WelcomePanel] Cannot change model: no agent selected");
                 return;
@@ -1035,7 +1061,7 @@ impl WelcomePanel {
         if sessions.is_empty() {
             // No sessions for this agent
             self.session_select.update(cx, |state, cx| {
-                state.set_items(vec!["No sessions".to_string()], window, cx);
+                state.set_items(vec![Self::no_sessions_label()], window, cx);
                 state.set_selected_index(None, window, cx);
             });
             self.current_session_id = None;
@@ -1054,7 +1080,7 @@ impl WelcomePanel {
                     } else {
                         &s.session_id
                     };
-                    format!("Session {}", short_id)
+                    Self::session_label(short_id)
                 })
                 .collect();
 
@@ -1100,7 +1126,7 @@ impl WelcomePanel {
         self.current_session_id = None;
         AppState::global_mut(cx).clear_welcome_session();
         self.session_select.update(cx, |state, cx| {
-            state.set_items(vec!["Creating session...".to_string()], window, cx);
+            state.set_items(vec![Self::creating_session_label()], window, cx);
             state.set_selected_index(None, window, cx);
         });
         self.sync_session_capabilities(None, window, cx);
@@ -1190,8 +1216,9 @@ impl WelcomePanel {
 
     /// Create a new session for the currently selected agent
     fn create_new_session(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let no_agents_label = Self::no_agents_label();
         let agent_name = match self.agent_select.read(cx).selected_value().cloned() {
-            Some(name) if name != "No agents" => name,
+            Some(name) if name != no_agents_label => name,
             _ => return,
         };
 
@@ -1225,7 +1252,7 @@ impl WelcomePanel {
                 .cloned()
                 .unwrap_or_else(|| "test-agent".to_string());
 
-            let agent_name = if agent_name == "No agents" {
+            let agent_name = if agent_name == Self::no_agents_label() {
                 "test-agent".to_string()
             } else {
                 agent_name
@@ -1380,23 +1407,25 @@ impl Render for WelcomePanel {
                                     .text_2xl()
                                     .font_semibold()
                                     .text_color(cx.theme().foreground)
-                                    .child("Welcome to Agent Studio"),
+                                    .child(t!("welcome.title").to_string()),
                             )
                             .child(
                                 gpui::div()
                                     .text_base()
                                     .text_color(cx.theme().muted_foreground)
-                                    .child(
-                                        if self.has_workspace {
-                                            if let Some(workspace_name) = &self.active_workspace_name {
-                                                format!("Current workspace: {} - Start by describing what you'd like to build", workspace_name)
-                                            } else {
-                                                "Start by describing what you'd like to build".to_string()
-                                            }
+                                    .child(if self.has_workspace {
+                                        if let Some(workspace_name) = &self.active_workspace_name {
+                                            t!(
+                                                "welcome.subtitle.current_workspace",
+                                                workspace = workspace_name
+                                            )
+                                            .to_string()
                                         } else {
-                                            "Please add a workspace first by clicking 'Add repository' in the left panel".to_string()
+                                            t!("welcome.subtitle.start").to_string()
                                         }
-                                    ),
+                                    } else {
+                                        t!("welcome.subtitle.no_workspace").to_string()
+                                    }),
                             ),
                     )
                     .child(
@@ -1414,7 +1443,7 @@ impl Render for WelcomePanel {
                                 }
                             }
                             if self.is_session_loading {
-                                chat = chat.agent_status_text("正在加载中...");
+                                chat = chat.agent_status_text(t!("welcome.loading").to_string());
                             }
 
                             // log::debug!(
@@ -1471,20 +1500,26 @@ impl Render for WelcomePanel {
                                 // Pass MCP servers and selection to ChatInputBox
                                 .available_mcps(self.available_mcps.clone())
                                 .selected_mcps(self.selected_mcps.clone())
-                                .on_mcp_toggle(cx.listener(|this, (name, checked): &(String, bool), window, cx| {
-                                    // Simple toggle logic
-                                    if *checked {
-                                        if !this.selected_mcps.contains(name) {
-                                            this.selected_mcps.push(name.clone());
+                                .on_mcp_toggle(cx.listener(
+                                    |this, (name, checked): &(String, bool), window, cx| {
+                                        // Simple toggle logic
+                                        if *checked {
+                                            if !this.selected_mcps.contains(name) {
+                                                this.selected_mcps.push(name.clone());
+                                            }
+                                        } else {
+                                            this.selected_mcps.retain(|s| s != name);
                                         }
-                                    } else {
-                                        this.selected_mcps.retain(|s| s != name);
-                                    }
-                                    this.mcp_selection_overridden = true;
-                                    log::info!("[WelcomePanel] MCP '{}' {}", name, if *checked { "selected" } else { "deselected" });
-                                    this.on_mcp_selection_changed(window, cx);
-                                    cx.notify();
-                                }))
+                                        this.mcp_selection_overridden = true;
+                                        log::info!(
+                                            "[WelcomePanel] MCP '{}' {}",
+                                            name,
+                                            if *checked { "selected" } else { "deselected" }
+                                        );
+                                        this.on_mcp_selection_changed(window, cx);
+                                        cx.notify();
+                                    },
+                                ))
                                 .on_paste(move |window, cx| {
                                     entity.update(cx, |this, cx| {
                                         this.handle_paste(window, cx);

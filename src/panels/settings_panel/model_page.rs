@@ -12,231 +12,269 @@ use gpui_component::{
     setting::{SettingGroup, SettingItem, SettingPage},
     v_flex,
 };
+use rust_i18n::t;
 
 use super::panel::SettingsPanel;
 use crate::AppState;
 
 impl SettingsPanel {
     pub fn model_page(&self, view: &Entity<Self>) -> SettingPage {
-        SettingPage::new("Models").resettable(false).groups(vec![
-            // Default AI Model Selection
-            SettingGroup::new()
-                .title("Default AI Model")
-                .description("Select the default model for AI code assistance features")
-                .item(SettingItem::render({
-                    let view = view.clone();
-                    move |_options, _window, cx| {
-                        let model_configs = view.read(cx).cached_models.clone();
-                        let ai_service = AppState::global(cx).ai_service();
+        SettingPage::new(t!("settings.models.title").to_string())
+            .resettable(false)
+            .groups(vec![
+                // Default AI Model Selection
+                SettingGroup::new()
+                    .title(t!("settings.models.default.title").to_string())
+                    .description(t!("settings.models.default.description").to_string())
+                    .item(SettingItem::render({
+                        let view = view.clone();
+                        move |_options, _window, cx| {
+                            let model_configs = view.read(cx).cached_models.clone();
+                            let ai_service = AppState::global(cx).ai_service();
 
-                        let default_model = if let Some(service) = ai_service {
-                            service.config.read().unwrap().default_model.clone()
-                        } else {
-                            None
-                        };
+                            let default_model = if let Some(service) = ai_service {
+                                service.config.read().unwrap().default_model.clone()
+                            } else {
+                                None
+                            };
 
-                        if model_configs.is_empty() {
-                            return v_flex()
-                                .w_full()
-                                .child(
-                                    Label::new("No models configured. Add a model below to enable AI features.")
+                            if model_configs.is_empty() {
+                                return v_flex().w_full().child(
+                                    Label::new(t!("settings.models.default.empty").to_string())
                                         .text_sm()
-                                        .text_color(cx.theme().muted_foreground)
+                                        .text_color(cx.theme().muted_foreground),
                                 );
-                        }
-
-                        let mut options_flex = h_flex().w_full().gap_2().flex_wrap();
-
-                        let mut idx: usize = 0;
-                        for (name, config) in model_configs.iter() {
-                            if !config.enabled {
-                                continue;
                             }
 
-                            let is_default = default_model.as_ref() == Some(name);
-                            let name_clone = name.clone();
+                            let mut options_flex = h_flex().w_full().gap_2().flex_wrap();
 
-                            options_flex = options_flex.child(
-                                Button::new(("default-model-btn", idx))
-                                    .label(name.clone())
-                                    .when(is_default, |btn| btn.icon(IconName::Check))
-                                    .when(!is_default, |btn| btn.outline())
-                                    .small()
-                                    .on_click({
-                                        let view = view.clone();
-                                        move |_, _window, cx| {
-                                            view.update(cx, |this, cx| {
-                                                this.set_default_model(name_clone.clone(), cx);
-                                            });
-                                        }
-                                    })
-                            );
-
-                            idx += 1;
-                        }
-
-                        v_flex().w_full().gap_2().child(options_flex)
-                    }
-                })),
-            // Model Providers List
-            SettingGroup::new()
-                .title("Model Providers")
-                .item(SettingItem::render({
-                    let view = view.clone();
-                    move |_options, _window, cx| {
-                        let model_configs = view.read(cx).cached_models.clone();
-
-                        let mut content = v_flex().w_full().gap_3().child(
-                            h_flex().w_full().justify_end().child(
-                                Button::new("add-model-btn")
-                                    .label("Add Model")
-                                    .icon(IconName::Plus)
-                                    .small()
-                                    .on_click({
-                                        let view = view.clone();
-                                        move |_, window, cx| {
-                                            view.update(cx, |this, cx| {
-                                                this.show_add_model_dialog(window, cx);
-                                            });
-                                        }
-                                    }),
-                            ),
-                        );
-
-                        if model_configs.is_empty() {
-                            content = content.child(
-                                h_flex().w_full().p_4().justify_center().child(
-                                    Label::new(
-                                        "No models configured. Click 'Add Model' to get started.",
-                                    )
-                                    .text_sm()
-                                    .text_color(cx.theme().muted_foreground),
-                                ),
-                            );
-                        } else {
-                            for (idx, (name, config)) in model_configs.iter().enumerate() {
-                                let name_for_edit = name.clone();
-                                let name_for_delete = name.clone();
-
-                                let mut model_info = v_flex()
-                                    .flex_1()
-                                    .gap_1()
-                                    .child(
-                                        Label::new(name.clone())
-                                            .text_sm()
-                                            .font_weight(gpui::FontWeight::SEMIBOLD),
-                                    )
-                                    .child(
-                                        Label::new(format!("Provider: {}", config.provider))
-                                            .text_xs()
-                                            .text_color(cx.theme().muted_foreground),
-                                    )
-                                    .child(
-                                        Label::new(format!("URL: {}", config.base_url))
-                                            .text_xs()
-                                            .text_color(cx.theme().muted_foreground),
-                                    );
-
-                                if !config.model_name.is_empty() {
-                                    model_info = model_info.child(
-                                        Label::new(format!("Model: {}", config.model_name))
-                                            .text_xs()
-                                            .text_color(cx.theme().muted_foreground),
-                                    );
+                            let mut idx: usize = 0;
+                            for (name, config) in model_configs.iter() {
+                                if !config.enabled {
+                                    continue;
                                 }
 
+                                let is_default = default_model.as_ref() == Some(name);
+                                let name_clone = name.clone();
+
+                                options_flex = options_flex.child(
+                                    Button::new(("default-model-btn", idx))
+                                        .label(name.clone())
+                                        .when(is_default, |btn| btn.icon(IconName::Check))
+                                        .when(!is_default, |btn| btn.outline())
+                                        .small()
+                                        .on_click({
+                                            let view = view.clone();
+                                            move |_, _window, cx| {
+                                                view.update(cx, |this, cx| {
+                                                    this.set_default_model(name_clone.clone(), cx);
+                                                });
+                                            }
+                                        }),
+                                );
+
+                                idx += 1;
+                            }
+
+                            v_flex().w_full().gap_2().child(options_flex)
+                        }
+                    })),
+                // Model Providers List
+                SettingGroup::new()
+                    .title(t!("settings.models.providers.title").to_string())
+                    .item(SettingItem::render({
+                        let view = view.clone();
+                        move |_options, _window, cx| {
+                            let model_configs = view.read(cx).cached_models.clone();
+
+                            let mut content = v_flex().w_full().gap_3().child(
+                                h_flex().w_full().justify_end().child(
+                                    Button::new("add-model-btn")
+                                        .label(t!("settings.models.button.add").to_string())
+                                        .icon(IconName::Plus)
+                                        .small()
+                                        .on_click({
+                                            let view = view.clone();
+                                            move |_, window, cx| {
+                                                view.update(cx, |this, cx| {
+                                                    this.show_add_model_dialog(window, cx);
+                                                });
+                                            }
+                                        }),
+                                ),
+                            );
+
+                            if model_configs.is_empty() {
                                 content = content.child(
-                                    h_flex()
-                                        .w_full()
-                                        .items_start()
-                                        .justify_between()
-                                        .p_3()
-                                        .gap_3()
-                                        .rounded(px(6.))
-                                        .bg(cx.theme().secondary)
-                                        .border_1()
-                                        .border_color(cx.theme().border)
-                                        .child(model_info)
+                                    h_flex().w_full().p_4().justify_center().child(
+                                        Label::new(t!("settings.models.empty").to_string())
+                                            .text_sm()
+                                            .text_color(cx.theme().muted_foreground),
+                                    ),
+                                );
+                            } else {
+                                for (idx, (name, config)) in model_configs.iter().enumerate() {
+                                    let name_for_edit = name.clone();
+                                    let name_for_delete = name.clone();
+
+                                    let mut model_info = v_flex()
+                                        .flex_1()
+                                        .gap_1()
                                         .child(
-                                            h_flex()
-                                                .gap_2()
-                                                .items_center()
-                                                .child(
-                                                    Label::new(if config.enabled {
-                                                        "Enabled"
-                                                    } else {
-                                                        "Disabled"
-                                                    })
-                                                    .text_xs()
-                                                    .text_color(cx.theme().muted_foreground),
+                                            Label::new(name.clone())
+                                                .text_sm()
+                                                .font_weight(gpui::FontWeight::SEMIBOLD),
+                                        )
+                                        .child(
+                                            Label::new(
+                                                t!(
+                                                    "settings.models.field.provider",
+                                                    provider = config.provider
                                                 )
-                                                .child(
-                                                    Button::new(("edit-model-btn", idx))
-                                                        .label("Edit")
-                                                        .icon(IconName::Settings)
-                                                        .outline()
-                                                        .small()
-                                                        .on_click({
-                                                            let view = view.clone();
-                                                            move |_, window, cx| {
-                                                                view.update(cx, |this, cx| {
-                                                                    this.show_edit_model_dialog(
+                                                .to_string(),
+                                            )
+                                            .text_xs()
+                                            .text_color(cx.theme().muted_foreground),
+                                        )
+                                        .child(
+                                            Label::new(
+                                                t!(
+                                                    "settings.models.field.url",
+                                                    url = config.base_url
+                                                )
+                                                .to_string(),
+                                            )
+                                            .text_xs()
+                                            .text_color(cx.theme().muted_foreground),
+                                        );
+
+                                    if !config.model_name.is_empty() {
+                                        model_info = model_info.child(
+                                            Label::new(
+                                                t!(
+                                                    "settings.models.field.model_name",
+                                                    model = config.model_name
+                                                )
+                                                .to_string(),
+                                            )
+                                            .text_xs()
+                                            .text_color(cx.theme().muted_foreground),
+                                        );
+                                    }
+
+                                    content = content.child(
+                                        h_flex()
+                                            .w_full()
+                                            .items_start()
+                                            .justify_between()
+                                            .p_3()
+                                            .gap_3()
+                                            .rounded(px(6.))
+                                            .bg(cx.theme().secondary)
+                                            .border_1()
+                                            .border_color(cx.theme().border)
+                                            .child(model_info)
+                                            .child(
+                                                h_flex()
+                                                    .gap_2()
+                                                    .items_center()
+                                                    .child(
+                                                        Label::new(if config.enabled {
+                                                            t!("settings.models.status.enabled")
+                                                                .to_string()
+                                                        } else {
+                                                            t!("settings.models.status.disabled")
+                                                                .to_string()
+                                                        })
+                                                        .text_xs()
+                                                        .text_color(cx.theme().muted_foreground),
+                                                    )
+                                                    .child(
+                                                        Button::new(("edit-model-btn", idx))
+                                                            .label(
+                                                                t!("settings.models.button.edit")
+                                                                    .to_string(),
+                                                            )
+                                                            .icon(IconName::Settings)
+                                                            .outline()
+                                                            .small()
+                                                            .on_click({
+                                                                let view = view.clone();
+                                                                move |_, window, cx| {
+                                                                    view.update(cx, |this, cx| {
+                                                                        this.show_edit_model_dialog(
                                                                         window,
                                                                         cx,
                                                                         name_for_edit.clone(),
                                                                     );
-                                                                });
-                                                            }
-                                                        }),
-                                                )
-                                                .child(
-                                                    Button::new(("delete-model-btn", idx))
-                                                        .label("Delete")
-                                                        .icon(IconName::Delete)
-                                                        .outline()
-                                                        .small()
-                                                        .on_click({
-                                                            let view = view.clone();
-                                                            move |_, window, cx| {
-                                                                view.update(cx, |this, cx| {
+                                                                    });
+                                                                }
+                                                            }),
+                                                    )
+                                                    .child(
+                                                        Button::new(("delete-model-btn", idx))
+                                                            .label(
+                                                                t!("settings.models.button.delete")
+                                                                    .to_string(),
+                                                            )
+                                                            .icon(IconName::Delete)
+                                                            .outline()
+                                                            .small()
+                                                            .on_click({
+                                                                let view = view.clone();
+                                                                move |_, window, cx| {
+                                                                    view.update(cx, |this, cx| {
                                                                     this.show_delete_model_dialog(
                                                                         window,
                                                                         cx,
                                                                         name_for_delete.clone(),
                                                                     );
                                                                 });
-                                                            }
-                                                        }),
-                                                ),
-                                        ),
-                                );
+                                                                }
+                                                            }),
+                                                    ),
+                                            ),
+                                    );
+                                }
                             }
-                        }
 
-                        content
-                    }
-                })),
-        ])
+                            content
+                        }
+                    })),
+            ])
     }
 
     pub fn show_add_model_dialog(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let name_input =
-            cx.new(|cx| InputState::new(window, cx).placeholder("Model name (e.g., GPT-4)"));
-        let provider_input =
-            cx.new(|cx| InputState::new(window, cx).placeholder("Provider (e.g., OpenAI)"));
-        let url_input = cx.new(|cx| InputState::new(window, cx).placeholder("Base URL"));
-        let key_input = cx.new(|cx| InputState::new(window, cx).placeholder("API Key"));
-        let model_input = cx.new(|cx| InputState::new(window, cx).placeholder("Model name"));
+        let name_input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder(t!("settings.models.input.name.placeholder").to_string())
+        });
+        let provider_input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder(t!("settings.models.input.provider.placeholder").to_string())
+        });
+        let url_input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder(t!("settings.models.input.url.placeholder").to_string())
+        });
+        let key_input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder(t!("settings.models.input.api_key.placeholder").to_string())
+        });
+        let model_input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder(t!("settings.models.input.model_name.placeholder").to_string())
+        });
         let entity = cx.entity().downgrade();
 
         window.open_dialog(cx, move |dialog, _window, _cx| {
             dialog
-                .title("Add Model Configuration")
+                .title(t!("settings.models.dialog.add.title").to_string())
                 .confirm()
                 .button_props(
                     DialogButtonProps::default()
-                        .ok_text("Add")
-                        .cancel_text("Cancel"),
+                        .ok_text(t!("settings.models.dialog.add.ok").to_string())
+                        .cancel_text(t!("settings.models.dialog.cancel").to_string()),
                 )
                 .on_ok({
                     let name_input = name_input.clone();
@@ -309,31 +347,37 @@ impl SettingsPanel {
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Name"))
+                                .child(Label::new(t!("settings.models.field.name").to_string()))
                                 .child(Input::new(&name_input)),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Provider"))
+                                .child(Label::new(
+                                    t!("settings.models.field.provider_label").to_string(),
+                                ))
                                 .child(Input::new(&provider_input)),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Base URL"))
+                                .child(Label::new(
+                                    t!("settings.models.field.url_label").to_string(),
+                                ))
                                 .child(Input::new(&url_input)),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("API Key"))
+                                .child(Label::new(t!("settings.models.field.api_key").to_string()))
                                 .child(Input::new(&key_input)),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Model Name"))
+                                .child(Label::new(
+                                    t!("settings.models.field.model_name_label").to_string(),
+                                ))
                                 .child(Input::new(&model_input)),
                         ),
                 )
@@ -376,12 +420,12 @@ impl SettingsPanel {
 
         window.open_dialog(cx, move |dialog, _window, _cx| {
             dialog
-                .title(format!("Edit Model: {}", model_name))
+                .title(t!("settings.models.dialog.edit.title", name = model_name).to_string())
                 .confirm()
                 .button_props(
                     DialogButtonProps::default()
-                        .ok_text("Save")
-                        .cancel_text("Cancel"),
+                        .ok_text(t!("settings.models.dialog.edit.ok").to_string())
+                        .cancel_text(t!("settings.models.dialog.cancel").to_string()),
                 )
                 .on_ok({
                     let provider_input = provider_input.clone();
@@ -438,25 +482,31 @@ impl SettingsPanel {
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Provider"))
+                                .child(Label::new(
+                                    t!("settings.models.field.provider_label").to_string(),
+                                ))
                                 .child(Input::new(&provider_input)),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Base URL"))
+                                .child(Label::new(
+                                    t!("settings.models.field.url_label").to_string(),
+                                ))
                                 .child(Input::new(&url_input)),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("API Key"))
+                                .child(Label::new(t!("settings.models.field.api_key").to_string()))
                                 .child(Input::new(&key_input)),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Model Name"))
+                                .child(Label::new(
+                                    t!("settings.models.field.model_name_label").to_string(),
+                                ))
                                 .child(Input::new(&model_input)),
                         ),
                 )
@@ -472,13 +522,13 @@ impl SettingsPanel {
         window.open_dialog(cx, move |dialog, _window, _cx| {
             let name = model_name.clone();
             dialog
-                .title("Confirm Delete")
+                .title(t!("settings.models.dialog.delete.title").to_string())
                 .confirm()
                 .button_props(
                     DialogButtonProps::default()
-                        .ok_text("Delete")
+                        .ok_text(t!("settings.models.dialog.delete.ok").to_string())
                         .ok_variant(gpui_component::button::ButtonVariant::Danger)
-                        .cancel_text("Cancel"),
+                        .cancel_text(t!("settings.models.dialog.cancel").to_string()),
                 )
                 .on_ok(move |_, _window, cx| {
                     if let Some(service) = AppState::global(cx).agent_config_service() {
@@ -499,8 +549,8 @@ impl SettingsPanel {
                 .child(
                     v_flex().w_full().gap_2().p_4().child(
                         Label::new(format!(
-                            "Are you sure you want to delete the model \"{}\"?",
-                            model_name
+                            "{}",
+                            t!("settings.models.dialog.delete.message", name = model_name)
                         ))
                         .text_sm(),
                     ),

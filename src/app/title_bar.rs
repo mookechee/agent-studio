@@ -3,7 +3,7 @@ use std::rc::Rc;
 use gpui::{
     AnyElement, App, AppContext, Context, Corner, Entity, FocusHandle, InteractiveElement as _,
     IntoElement, MouseButton, ParentElement as _, Render, SharedString, Styled as _, Subscription,
-    Window, actions, div, px,
+    Window, actions, div, prelude::FluentBuilder, px,
 };
 use gpui_component::{
     ActiveTheme as _, IconName, PixelsExt, Sizable as _, Theme, TitleBar, WindowExt as _,
@@ -13,8 +13,9 @@ use gpui_component::{
     menu::DropdownMenu as _,
     scroll::ScrollbarShow,
 };
+use rust_i18n::t;
 
-use crate::{SelectFont, SelectRadius, SelectScrollbarShow, app_menus};
+use crate::{AppState, SelectFont, SelectRadius, SelectScrollbarShow, app_menus};
 
 actions!(title_bar, [OpenSettings]);
 
@@ -31,7 +32,9 @@ impl AppTitleBar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        app_menus::init(title, cx);
+        let title = title.into();
+        app_menus::init(title.clone(), cx);
+        AppState::global_mut(cx).set_app_title(title);
 
         let font_size_selector = cx.new(|cx| FontSizeSelector::new(window, cx));
         let app_menu_bar = AppMenuBar::new(cx);
@@ -72,7 +75,14 @@ impl Render for AppTitleBar {
             .child(
                 TitleBar::new()
                     // left side
-                    .child(div().flex().items_center().child(self.app_menu_bar.clone()))
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .when(!cfg!(target_os = "macos"), |this| {
+                                this.child(self.app_menu_bar.clone())
+                            }),
+                    )
                     .child(
                         div()
                             .flex()
@@ -185,38 +195,58 @@ impl Render for FontSizeSelector {
                     .dropdown_menu(move |this, _, _| {
                         this.scrollable(true)
                             .max_h(px(480.))
-                            .label("Font Size")
-                            .menu_with_check("Large", font_size == 18, Box::new(SelectFont(18)))
+                            .label(t!("title_bar.font_size.label").to_string())
                             .menu_with_check(
-                                "Medium (default)",
+                                t!("title_bar.font_size.large").to_string(),
+                                font_size == 18,
+                                Box::new(SelectFont(18)),
+                            )
+                            .menu_with_check(
+                                t!("title_bar.font_size.medium_default").to_string(),
                                 font_size == 16,
                                 Box::new(SelectFont(16)),
                             )
-                            .menu_with_check("Small", font_size == 14, Box::new(SelectFont(14)))
-                            .separator()
-                            .label("Border Radius")
-                            .menu_with_check("8px", radius == 8, Box::new(SelectRadius(8)))
                             .menu_with_check(
-                                "6px (default)",
+                                t!("title_bar.font_size.small").to_string(),
+                                font_size == 14,
+                                Box::new(SelectFont(14)),
+                            )
+                            .separator()
+                            .label(t!("title_bar.border_radius.label").to_string())
+                            .menu_with_check(
+                                t!("title_bar.border_radius.8px").to_string(),
+                                radius == 8,
+                                Box::new(SelectRadius(8)),
+                            )
+                            .menu_with_check(
+                                t!("title_bar.border_radius.6px_default").to_string(),
                                 radius == 6,
                                 Box::new(SelectRadius(6)),
                             )
-                            .menu_with_check("4px", radius == 4, Box::new(SelectRadius(4)))
-                            .menu_with_check("0px", radius == 0, Box::new(SelectRadius(0)))
-                            .separator()
-                            .label("Scrollbar")
                             .menu_with_check(
-                                "Scrolling to show",
+                                t!("title_bar.border_radius.4px").to_string(),
+                                radius == 4,
+                                Box::new(SelectRadius(4)),
+                            )
+                            .menu_with_check(
+                                t!("title_bar.border_radius.0px").to_string(),
+                                radius == 0,
+                                Box::new(SelectRadius(0)),
+                            )
+                            .separator()
+                            .label(t!("title_bar.scrollbar.label").to_string())
+                            .menu_with_check(
+                                t!("title_bar.scrollbar.scrolling").to_string(),
                                 scroll_show == ScrollbarShow::Scrolling,
                                 Box::new(SelectScrollbarShow(ScrollbarShow::Scrolling)),
                             )
                             .menu_with_check(
-                                "Hover to show",
+                                t!("title_bar.scrollbar.hover").to_string(),
                                 scroll_show == ScrollbarShow::Hover,
                                 Box::new(SelectScrollbarShow(ScrollbarShow::Hover)),
                             )
                             .menu_with_check(
-                                "Always show",
+                                t!("title_bar.scrollbar.always").to_string(),
                                 scroll_show == ScrollbarShow::Always,
                                 Box::new(SelectScrollbarShow(ScrollbarShow::Always)),
                             )

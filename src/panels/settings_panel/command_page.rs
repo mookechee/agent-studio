@@ -9,15 +9,18 @@ use gpui_component::{
     setting::{SettingGroup, SettingItem, SettingPage},
     v_flex,
 };
+use rust_i18n::t;
 
 use super::panel::SettingsPanel;
 use crate::AppState;
 
 impl SettingsPanel {
     pub fn command_page(&self, view: &Entity<Self>) -> SettingPage {
-        SettingPage::new("Commands").resettable(false).groups(vec![
+        SettingPage::new(t!("settings.commands.title").to_string())
+            .resettable(false)
+            .groups(vec![
             SettingGroup::new()
-                .title("Custom Commands")
+                .title(t!("settings.commands.group.custom").to_string())
                 .item(SettingItem::render({
                     let view = view.clone();
                     move |_options, _window, cx| {
@@ -26,7 +29,7 @@ impl SettingsPanel {
                         let mut content = v_flex().w_full().gap_3().child(
                             h_flex().w_full().justify_end().child(
                                 Button::new("add-command-btn")
-                                    .label("Add Command")
+                                    .label(t!("settings.commands.button.add").to_string())
                                     .icon(IconName::Plus)
                                     .small()
                                     .on_click({
@@ -44,7 +47,7 @@ impl SettingsPanel {
                             content = content.child(
                             h_flex().w_full().p_4().justify_center().child(
                                 Label::new(
-                                    "No commands configured. Click 'Add Command' to get started.",
+                                    t!("settings.commands.empty").to_string(),
                                 )
                                 .text_sm()
                                 .text_color(cx.theme().muted_foreground),
@@ -87,7 +90,7 @@ impl SettingsPanel {
                                                 .items_center()
                                                 .child(
                                                     Button::new(("edit-command-btn", idx))
-                                                        .label("Edit")
+                                                        .label(t!("settings.commands.button.edit").to_string())
                                                         .icon(IconName::Settings)
                                                         .outline()
                                                         .small()
@@ -106,7 +109,7 @@ impl SettingsPanel {
                                                 )
                                                 .child(
                                                     Button::new(("delete-command-btn", idx))
-                                                        .label("Delete")
+                                                        .label(t!("settings.commands.button.delete").to_string())
                                                         .icon(IconName::Delete)
                                                         .outline()
                                                         .small()
@@ -135,20 +138,27 @@ impl SettingsPanel {
     }
 
     pub fn show_add_command_dialog(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let name_input =
-            cx.new(|cx| InputState::new(window, cx).placeholder("Command name (without /)"));
-        let desc_input = cx.new(|cx| InputState::new(window, cx).placeholder("Description"));
-        let template_input =
-            cx.new(|cx| InputState::new(window, cx).placeholder("Template/Content"));
+        let name_input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder(t!("settings.commands.input.name.placeholder").to_string())
+        });
+        let desc_input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder(t!("settings.commands.input.description.placeholder").to_string())
+        });
+        let template_input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder(t!("settings.commands.input.template.placeholder").to_string())
+        });
 
         window.open_dialog(cx, move |dialog, _window, _cx| {
             dialog
-                .title("Add Custom Command")
+                .title(t!("settings.commands.dialog.add.title").to_string())
                 .confirm()
                 .button_props(
                     DialogButtonProps::default()
-                        .ok_text("Add")
-                        .cancel_text("Cancel"),
+                        .ok_text(t!("settings.commands.dialog.add.ok").to_string())
+                        .cancel_text(t!("settings.commands.dialog.cancel").to_string()),
                 )
                 .on_ok({
                     let name_input = name_input.clone();
@@ -203,19 +213,23 @@ impl SettingsPanel {
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Command Name"))
+                                .child(Label::new(t!("settings.commands.field.name").to_string()))
                                 .child(Input::new(&name_input)),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Description"))
+                                .child(Label::new(
+                                    t!("settings.commands.field.description").to_string(),
+                                ))
                                 .child(Input::new(&desc_input)),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Template"))
+                                .child(Label::new(
+                                    t!("settings.commands.field.template").to_string(),
+                                ))
                                 .child(Input::new(&template_input)),
                         ),
                 )
@@ -249,12 +263,12 @@ impl SettingsPanel {
 
         window.open_dialog(cx, move |dialog, _window, _cx| {
             dialog
-                .title(format!("Edit Command: /{}", command_name))
+                .title(t!("settings.commands.dialog.edit.title", name = command_name).to_string())
                 .confirm()
                 .button_props(
                     DialogButtonProps::default()
-                        .ok_text("Save")
-                        .cancel_text("Cancel"),
+                        .ok_text(t!("settings.commands.dialog.edit.ok").to_string())
+                        .cancel_text(t!("settings.commands.dialog.cancel").to_string()),
                 )
                 .on_ok({
                     let desc_input = desc_input.clone();
@@ -326,13 +340,17 @@ impl SettingsPanel {
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Description"))
+                                .child(Label::new(
+                                    t!("settings.commands.field.description").to_string(),
+                                ))
                                 .child(Input::new(&desc_input)),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Template"))
+                                .child(Label::new(
+                                    t!("settings.commands.field.template").to_string(),
+                                ))
                                 .child(Input::new(&template_input)),
                         ),
                 )
@@ -348,13 +366,13 @@ impl SettingsPanel {
         window.open_dialog(cx, move |dialog, _window, _cx| {
             let name = command_name.clone();
             dialog
-                .title("Confirm Delete")
+                .title(t!("settings.commands.dialog.delete.title").to_string())
                 .confirm()
                 .button_props(
                     DialogButtonProps::default()
-                        .ok_text("Delete")
+                        .ok_text(t!("settings.commands.dialog.delete.ok").to_string())
                         .ok_variant(gpui_component::button::ButtonVariant::Danger)
-                        .cancel_text("Cancel"),
+                        .cancel_text(t!("settings.commands.dialog.cancel").to_string()),
                 )
                 .on_ok(move |_, _window, cx| {
                     if let Some(service) = AppState::global(cx).agent_config_service() {
@@ -375,8 +393,11 @@ impl SettingsPanel {
                 .child(
                     v_flex().w_full().gap_2().p_4().child(
                         Label::new(format!(
-                            "Are you sure you want to delete the command \"/{}\"?",
-                            command_name
+                            "{}",
+                            t!(
+                                "settings.commands.dialog.delete.message",
+                                name = command_name
+                            )
                         ))
                         .text_sm(),
                     ),

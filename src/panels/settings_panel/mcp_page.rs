@@ -9,6 +9,7 @@ use gpui_component::{
     setting::{SettingGroup, SettingItem, SettingPage},
     v_flex,
 };
+use rust_i18n::t;
 use std::collections::HashMap;
 
 use super::panel::SettingsPanel;
@@ -16,78 +17,65 @@ use crate::{AppState, core::config::McpServerConfig};
 
 impl SettingsPanel {
     pub fn mcp_page(&self, view: &Entity<Self>) -> SettingPage {
-        SettingPage::new("MCP Servers")
+        SettingPage::new(t!("settings.mcp.title").to_string())
             .resettable(false)
             .groups(vec![
                 SettingGroup::new()
-                    .title("MCP Server Configurations")
+                    .title(t!("settings.mcp.group.configurations").to_string())
                     .item(SettingItem::render({
                         let view = view.clone();
                         move |_options, _window, cx| {
                             let mcp_configs = view.read(cx).cached_mcp_servers.clone();
 
-                            let mut content = v_flex()
-                                .w_full()
-                                .gap_3()
-                                .child(
-                                    h_flex()
-                                        .w_full()
-                                        .justify_end()
-                                        .child(
-                                            Button::new("add-mcp-btn")
-                                                .label("Add MCP Server")
-                                                .icon(IconName::Plus)
-                                                .small()
-                                                .on_click({
-                                                    let view = view.clone();
-                                                    move |_, window, cx| {
-                                                        view.update(cx, |this, cx| {
-                                                            this.show_add_mcp_dialog(window, cx);
-                                                        });
-                                                    }
-                                                })
-                                        )
-                                );
+                            let mut content = v_flex().w_full().gap_3().child(
+                                h_flex().w_full().justify_end().child(
+                                    Button::new("add-mcp-btn")
+                                        .label(t!("settings.mcp.button.add").to_string())
+                                        .icon(IconName::Plus)
+                                        .small()
+                                        .on_click({
+                                            let view = view.clone();
+                                            move |_, window, cx| {
+                                                view.update(cx, |this, cx| {
+                                                    this.show_add_mcp_dialog(window, cx);
+                                                });
+                                            }
+                                        }),
+                                ),
+                            );
 
                             if mcp_configs.is_empty() {
                                 content = content.child(
-                                    h_flex()
-                                        .w_full()
-                                        .p_4()
-                                        .justify_center()
-                                        .child(
-                                            Label::new("No MCP servers configured. Click 'Add MCP Server' to get started.")
-                                                .text_sm()
-                                                .text_color(cx.theme().muted_foreground)
-                                        )
+                                    h_flex().w_full().p_4().justify_center().child(
+                                        Label::new(t!("settings.mcp.empty").to_string())
+                                            .text_sm()
+                                            .text_color(cx.theme().muted_foreground),
+                                    ),
                                 );
                             } else {
                                 for (idx, (name, config)) in mcp_configs.iter().enumerate() {
                                     let name_for_edit = name.clone();
                                     let name_for_delete = name.clone();
 
-                                    let mut mcp_info = v_flex()
-                                        .flex_1()
-                                        .gap_1()
-                                        .child(
-                                            Label::new(name.clone())
-                                                .text_sm()
-                                                .font_weight(gpui::FontWeight::SEMIBOLD)
-                                        );
+                                    let mut mcp_info = v_flex().flex_1().gap_1().child(
+                                        Label::new(name.clone())
+                                            .text_sm()
+                                            .font_weight(gpui::FontWeight::SEMIBOLD),
+                                    );
 
                                     if !config.description.is_empty() {
                                         mcp_info = mcp_info.child(
                                             Label::new(config.description.clone())
                                                 .text_xs()
-                                                .text_color(cx.theme().muted_foreground)
+                                                .text_color(cx.theme().muted_foreground),
                                         );
                                     }
 
                                     // Note: Config is a structured McpServer type
                                     mcp_info = mcp_info.child(
-                                        Label::new("Config: Configured")
+                                        Label::new(t!("settings.mcp.field.configured").to_string())
                                             .text_xs()
-                                            .text_color(cx.theme().muted_foreground)
+                                            .text_color(cx.theme().muted_foreground),
                                     );
 
                                     content = content.child(
@@ -107,13 +95,22 @@ impl SettingsPanel {
                                                     .gap_2()
                                                     .items_center()
                                                     .child(
-                                                        Label::new(if config.enabled { "Enabled" } else { "Disabled" })
-                                                            .text_xs()
-                                                            .text_color(cx.theme().muted_foreground)
+                                                        Label::new(if config.enabled {
+                                                            t!("settings.mcp.status.enabled")
+                                                                .to_string()
+                                                        } else {
+                                                            t!("settings.mcp.status.disabled")
+                                                                .to_string()
+                                                        })
+                                                        .text_xs()
+                                                        .text_color(cx.theme().muted_foreground),
                                                     )
                                                     .child(
                                                         Button::new(("edit-mcp-btn", idx))
-                                                            .label("Edit")
+                                                            .label(
+                                                                t!("settings.mcp.button.edit")
+                                                                    .to_string(),
+                                                            )
                                                             .icon(IconName::Settings)
                                                             .outline()
                                                             .small()
@@ -124,15 +121,18 @@ impl SettingsPanel {
                                                                         this.show_edit_mcp_dialog(
                                                                             window,
                                                                             cx,
-                                                                            name_for_edit.clone()
+                                                                            name_for_edit.clone(),
                                                                         );
                                                                     });
                                                                 }
-                                                            })
+                                                            }),
                                                     )
                                                     .child(
                                                         Button::new(("delete-mcp-btn", idx))
-                                                            .label("Delete")
+                                                            .label(
+                                                                t!("settings.mcp.button.delete")
+                                                                    .to_string(),
+                                                            )
                                                             .icon(IconName::Delete)
                                                             .outline()
                                                             .small()
@@ -147,9 +147,9 @@ impl SettingsPanel {
                                                                         );
                                                                     });
                                                                 }
-                                                            })
-                                                    )
-                                            )
+                                                            }),
+                                                    ),
+                                            ),
                                     );
                                 }
                             }
@@ -159,7 +159,7 @@ impl SettingsPanel {
                     })),
                 // JSON Editor Group
                 SettingGroup::new()
-                    .title("JSON Editor")
+                    .title(t!("settings.mcp.group.json_editor").to_string())
                     .item(SettingItem::render({
                         let view = view.clone();
                         move |_options, _window, cx| {
@@ -170,9 +170,9 @@ impl SettingsPanel {
                                 .w_full()
                                 .gap_3()
                                 .child(
-                                    Label::new("Edit MCP servers configuration in JSON format. Supports both simplified and full formats.")
+                                    Label::new(t!("settings.mcp.json.description").to_string())
                                         .text_xs()
-                                        .text_color(cx.theme().muted_foreground)
+                                        .text_color(cx.theme().muted_foreground),
                                 )
                                 .child(
                                     h_flex()
@@ -180,21 +180,28 @@ impl SettingsPanel {
                                         .gap_2()
                                         .child(
                                             Button::new("load-mcp-json-btn")
-                                                .label("Load from Config")
+                                                .label(
+                                                    t!("settings.mcp.json.button.load").to_string(),
+                                                )
                                                 .icon(IconName::ArrowDown)
                                                 .small()
                                                 .on_click({
                                                     let view = view.clone();
                                                     move |_, window, cx| {
                                                         view.update(cx, |this, cx| {
-                                                            this.load_mcp_servers_to_json(window, cx);
+                                                            this.load_mcp_servers_to_json(
+                                                                window, cx,
+                                                            );
                                                         });
                                                     }
-                                                })
+                                                }),
                                         )
                                         .child(
                                             Button::new("validate-mcp-json-btn")
-                                                .label("Validate")
+                                                .label(
+                                                    t!("settings.mcp.json.button.validate")
+                                                        .to_string(),
+                                                )
                                                 .icon(IconName::Check)
                                                 .small()
                                                 .on_click({
@@ -204,11 +211,13 @@ impl SettingsPanel {
                                                             this.validate_mcp_json(window, cx);
                                                         });
                                                     }
-                                                })
+                                                }),
                                         )
                                         .child(
                                             Button::new("save-mcp-json-btn")
-                                                .label("Save")
+                                                .label(
+                                                    t!("settings.mcp.json.button.save").to_string(),
+                                                )
                                                 .icon(IconName::ArrowUp)
                                                 .small()
                                                 .on_click({
@@ -218,22 +227,18 @@ impl SettingsPanel {
                                                             this.save_mcp_json(window, cx);
                                                         });
                                                     }
-                                                })
-                                        )
+                                                }),
+                                        ),
                                 )
-                                .child(
-                                    Input::new(&json_editor)
-                                        .h(px(300.))
-                                        .w_full()
-                                )
+                                .child(Input::new(&json_editor).h(px(300.)).w_full())
                                 .children(json_error.map(|error| {
-                                    Label::new(error.clone())
-                                        .text_sm()
-                                        .text_color(if error.starts_with("✓") {
+                                    Label::new(error.clone()).text_sm().text_color(
+                                        if error.starts_with("✓") {
                                             gpui::green()
                                         } else {
                                             gpui::red()
-                                        })
+                                        },
+                                    )
                                 }))
                                 .child(
                                     v_flex()
@@ -244,13 +249,13 @@ impl SettingsPanel {
                                         .border_1()
                                         .border_color(cx.theme().border)
                                         .child(
-                                            Label::new("Example (Simplified Format):")
+                                            Label::new(t!("settings.mcp.json.example").to_string())
                                                 .text_xs()
-                                                .font_weight(gpui::FontWeight::SEMIBOLD)
+                                                .font_weight(gpui::FontWeight::SEMIBOLD),
                                         )
                                         .child(
                                             Label::new(
-r#"{
+                                                r#"{
   "mcpServers": {
     "filesystem": {
       "command": "npx",
@@ -260,11 +265,11 @@ r#"{
       }
     }
   }
-}"#
+}"#,
                                             )
                                             .text_xs()
-                                            .text_color(cx.theme().muted_foreground)
-                                        )
+                                            .text_color(cx.theme().muted_foreground),
+                                        ),
                                 )
                         }
                     })),
@@ -272,20 +277,27 @@ r#"{
     }
 
     pub fn show_add_mcp_dialog(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let name_input = cx.new(|cx| InputState::new(window, cx).placeholder("Server name"));
-        let desc_input = cx.new(|cx| InputState::new(window, cx).placeholder("Description"));
+        let name_input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder(t!("settings.mcp.dialog.add.name.placeholder").to_string())
+        });
+        let desc_input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder(t!("settings.mcp.dialog.add.description.placeholder").to_string())
+        });
         let config_input = cx.new(|cx| {
-            InputState::new(window, cx).placeholder("Config JSON (e.g., {\"key\": \"value\"})")
+            InputState::new(window, cx)
+                .placeholder(t!("settings.mcp.dialog.add.config.placeholder").to_string())
         });
 
         window.open_dialog(cx, move |dialog, _window, _cx| {
             dialog
-                .title("Add MCP Server")
+                .title(t!("settings.mcp.dialog.add.title").to_string())
                 .confirm()
                 .button_props(
                     DialogButtonProps::default()
-                        .ok_text("Add")
-                        .cancel_text("Cancel"),
+                        .ok_text(t!("settings.mcp.dialog.add.ok").to_string())
+                        .cancel_text(t!("settings.mcp.dialog.cancel").to_string()),
                 )
                 .on_ok({
                     let name_input = name_input.clone();
@@ -352,19 +364,25 @@ r#"{
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Name"))
+                                .child(Label::new(
+                                    t!("settings.mcp.dialog.add.name.label").to_string(),
+                                ))
                                 .child(Input::new(&name_input)),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Description"))
+                                .child(Label::new(
+                                    t!("settings.mcp.dialog.add.description.label").to_string(),
+                                ))
                                 .child(Input::new(&desc_input)),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
-                                .child(Label::new("Configuration"))
+                                .child(Label::new(
+                                    t!("settings.mcp.dialog.add.config.label").to_string(),
+                                ))
                                 .child(Input::new(&config_input)),
                         ),
                 )
@@ -393,12 +411,12 @@ r#"{
 
         window.open_dialog(cx, move |dialog, _window, _cx| {
             dialog
-                .title(format!("Edit MCP Server: {}", server_name))
+                .title(t!("settings.mcp.dialog.edit.title", name = server_name).to_string())
                 .confirm()
                 .button_props(
                     DialogButtonProps::default()
-                        .ok_text("Save")
-                        .cancel_text("Cancel"),
+                        .ok_text(t!("settings.mcp.dialog.edit.ok").to_string())
+                        .cancel_text(t!("settings.mcp.dialog.cancel").to_string()),
                 )
                 .on_ok({
                     let desc_input = desc_input.clone();
@@ -457,7 +475,9 @@ r#"{
                     v_flex().w_full().gap_3().p_4().child(
                         v_flex()
                             .gap_2()
-                            .child(Label::new("Description"))
+                            .child(Label::new(
+                                t!("settings.mcp.dialog.edit.description.label").to_string(),
+                            ))
                             .child(Input::new(&desc_input)),
                     ),
                 )
@@ -473,13 +493,13 @@ r#"{
         window.open_dialog(cx, move |dialog, _window, _cx| {
             let name = server_name.clone();
             dialog
-                .title("Confirm Delete")
+                .title(t!("settings.mcp.dialog.delete.title").to_string())
                 .confirm()
                 .button_props(
                     DialogButtonProps::default()
-                        .ok_text("Delete")
+                        .ok_text(t!("settings.mcp.dialog.delete.ok").to_string())
                         .ok_variant(gpui_component::button::ButtonVariant::Danger)
-                        .cancel_text("Cancel"),
+                        .cancel_text(t!("settings.mcp.dialog.cancel").to_string()),
                 )
                 .on_ok(move |_, _window, cx| {
                     if let Some(service) = AppState::global(cx).agent_config_service() {
@@ -500,8 +520,8 @@ r#"{
                 .child(
                     v_flex().w_full().gap_2().p_4().child(
                         Label::new(format!(
-                            "Are you sure you want to delete the MCP server \"{}\"?",
-                            server_name
+                            "{}",
+                            t!("settings.mcp.dialog.delete.message", name = server_name)
                         ))
                         .text_sm(),
                     ),
@@ -517,15 +537,15 @@ r#"{
         let json_text = self.mcp_json_editor.read(cx).text().to_string();
 
         let value = serde_json::from_str::<serde_json::Value>(&json_text)
-            .map_err(|e| format!("Invalid JSON: {}", e))?;
+            .map_err(|e| t!("settings.mcp.json.error.invalid_json", error = e).to_string())?;
 
         let mcp_servers = value
             .as_object()
             .and_then(|obj| obj.get("mcpServers").or_else(|| obj.get("mcp_servers")))
-            .ok_or_else(|| "Missing 'mcpServers' or 'mcp_servers' field".to_string())?;
+            .ok_or_else(|| t!("settings.mcp.json.error.missing_field").to_string())?;
 
         serde_json::from_value::<HashMap<String, McpServerConfig>>(mcp_servers.clone())
-            .map_err(|e| format!("Invalid MCP config: {}", e))
+            .map_err(|e| t!("settings.mcp.json.error.invalid_config", error = e).to_string())
     }
 
     pub fn load_mcp_servers_to_json(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -552,8 +572,8 @@ r#"{
 
     pub fn validate_mcp_json(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
         self.mcp_json_error = match self.parse_mcp_json(cx) {
-            Ok(servers) => Some(format!("✓ Valid! Found {} MCP server(s)", servers.len())),
-            Err(e) => Some(format!("✗ {}", e)),
+            Ok(servers) => Some(t!("settings.mcp.json.valid", count = servers.len()).to_string()),
+            Err(e) => Some(t!("settings.mcp.json.invalid", error = e).to_string()),
         };
         cx.notify();
     }
@@ -575,13 +595,14 @@ r#"{
                         log::info!("MCP servers saved successfully");
                     })
                     .detach();
-                    self.mcp_json_error = Some("✓ Saved successfully!".to_string());
+                    self.mcp_json_error = Some(t!("settings.mcp.json.saved").to_string());
                 } else {
-                    self.mcp_json_error = Some("✗ Agent config service not available".to_string());
+                    self.mcp_json_error =
+                        Some(t!("settings.mcp.json.service_unavailable").to_string());
                 }
             }
             Err(e) => {
-                self.mcp_json_error = Some(format!("✗ {}", e));
+                self.mcp_json_error = Some(t!("settings.mcp.json.invalid", error = e).to_string());
             }
         }
         cx.notify();

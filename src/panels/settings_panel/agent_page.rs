@@ -9,6 +9,7 @@ use gpui_component::{
     setting::{SettingField, SettingGroup, SettingItem, SettingPage},
     v_flex,
 };
+use rust_i18n::t;
 use std::collections::HashMap;
 
 use super::panel::SettingsPanel;
@@ -21,21 +22,24 @@ use crate::{
 
 impl SettingsPanel {
     pub fn agent_page(&self, view: &Entity<Self>) -> SettingPage {
-        SettingPage::new("Agent Servers")
+        SettingPage::new(t!("settings.agents.title").to_string())
             .resettable(false)
             .groups(vec![
                 SettingGroup::new()
-                    .title("Configuration")
+                    .title(t!("settings.agents.group.configuration").to_string())
                     .items(vec![
                         SettingItem::new(
-                            "Config File Path",
+                            t!("settings.agents.config.path.label").to_string(),
                             SettingField::render({
                                 let view = view.clone();
                                 move |_options, _window, cx| {
                                     let config_path = AppState::global(cx)
                                         .agent_config_service()
                                         .map(|s| s.config_path().to_string_lossy().to_string())
-                                        .unwrap_or_else(|| "Not configured".to_string());
+                                        .unwrap_or_else(|| {
+                                            t!("settings.agents.config.path.not_configured")
+                                                .to_string()
+                                        });
 
                                     v_flex()
                                         .w_full()
@@ -56,7 +60,10 @@ impl SettingsPanel {
                                                 .gap_2()
                                                 .child(
                                                     Button::new("browse-config")
-                                                        .label("Browse...")
+                                                        .label(
+                                                            t!("settings.agents.config.path.browse")
+                                                                .to_string(),
+                                                        )
                                                         .icon(IconName::Folder)
                                                         .outline()
                                                         .small()
@@ -71,7 +78,10 @@ impl SettingsPanel {
                                                 )
                                                 .child(
                                                     Button::new("reload-config")
-                                                        .label("Reload")
+                                                        .label(
+                                                            t!("settings.agents.config.path.reload")
+                                                                .to_string(),
+                                                        )
                                                         .icon(IconName::LoaderCircle)
                                                         .outline()
                                                         .small()
@@ -86,15 +96,17 @@ impl SettingsPanel {
                                 }
                             }),
                         )
-                        .description("Path to agent configuration file (config.json)"),
+                        .description(
+                            t!("settings.agents.config.path.description").to_string(),
+                        ),
                         SettingItem::new(
-                            "Upload Directory",
+                            t!("settings.agents.upload_dir.label").to_string(),
                             SettingField::render({
                                 let view = view.clone();
                                 move |_options, _window, cx| {
                                     let upload_dir = view.read(cx).cached_upload_dir.to_string_lossy().to_string();
                                     let display = if upload_dir.is_empty() {
-                                        "Not configured".to_string()
+                                        t!("settings.agents.upload_dir.not_configured").to_string()
                                     } else {
                                         upload_dir
                                     };
@@ -112,10 +124,12 @@ impl SettingsPanel {
                                 }
                             }),
                         )
-                        .description("Directory for uploaded files (edit via config.json)"),
+                        .description(
+                            t!("settings.agents.upload_dir.description").to_string(),
+                        ),
                     ]),
                 SettingGroup::new()
-                    .title("Configured Agents")
+                    .title(t!("settings.agents.group.configured").to_string())
                     .item(SettingItem::render({
                         let view = view.clone();
                         move |_options, _window, cx| {
@@ -131,7 +145,9 @@ impl SettingsPanel {
                                         .justify_end()
                                         .child(
                                             Button::new("add-agent-btn")
-                                                .label("Add New Agent")
+                                                .label(
+                                                    t!("settings.agents.button.add").to_string(),
+                                                )
                                                 .icon(IconName::Plus)
                                                 .small()
                                                 .on_click({
@@ -152,7 +168,7 @@ impl SettingsPanel {
                                         .p_4()
                                         .justify_center()
                                         .child(
-                                            Label::new("No agents configured. Click 'Add New Agent' to get started.")
+                                            Label::new(t!("settings.agents.empty").to_string())
                                                 .text_sm()
                                                 .text_color(cx.theme().muted_foreground)
                                         )
@@ -172,14 +188,26 @@ impl SettingsPanel {
                                                 .font_weight(gpui::FontWeight::SEMIBOLD)
                                         )
                                         .child(
-                                            Label::new(format!("Command: {}", config.command))
+                                            Label::new(
+                                                t!(
+                                                    "settings.agents.field.command",
+                                                    command = config.command
+                                                )
+                                                .to_string(),
+                                            )
                                                 .text_xs()
                                                 .text_color(cx.theme().muted_foreground)
                                         );
 
                                     if !config.args.is_empty() {
                                         agent_info = agent_info.child(
-                                            Label::new(format!("Args: {}", config.args.join(" ")))
+                                            Label::new(
+                                                t!(
+                                                    "settings.agents.field.args",
+                                                    args = config.args.join(" ")
+                                                )
+                                                .to_string(),
+                                            )
                                                 .text_xs()
                                                 .text_color(cx.theme().muted_foreground)
                                         );
@@ -187,7 +215,13 @@ impl SettingsPanel {
 
                                     if !config.env.is_empty() {
                                         agent_info = agent_info.child(
-                                            Label::new(format!("Env vars: {} defined", config.env.len()))
+                                            Label::new(
+                                                t!(
+                                                    "settings.agents.field.env",
+                                                    count = config.env.len()
+                                                )
+                                                .to_string(),
+                                            )
                                                 .text_xs()
                                                 .text_color(cx.theme().muted_foreground)
                                         );
@@ -212,7 +246,10 @@ impl SettingsPanel {
                                                     .items_center()
                                                     .child(
                                                         Button::new(("edit-btn", idx))
-                                                            .label("Edit")
+                                                            .label(
+                                                                t!("settings.agents.button.edit")
+                                                                    .to_string(),
+                                                            )
                                                             .icon(IconName::Settings)
                                                             .outline()
                                                             .small()
@@ -231,7 +268,10 @@ impl SettingsPanel {
                                                     )
                                                     .child(
                                                         Button::new(("restart-btn", idx))
-                                                            .label("Restart")
+                                                            .label(
+                                                                t!("settings.agents.button.restart")
+                                                                    .to_string(),
+                                                            )
                                                             .icon(IconName::LoaderCircle)
                                                             .outline()
                                                             .small()
@@ -247,7 +287,10 @@ impl SettingsPanel {
                                                     )
                                                     .child(
                                                         Button::new(("remove-btn", idx))
-                                                            .label("Remove")
+                                                            .label(
+                                                                t!("settings.agents.button.remove")
+                                                                    .to_string(),
+                                                            )
                                                             .icon(IconName::Delete)
                                                             .outline()
                                                             .small()
@@ -284,9 +327,9 @@ impl SettingsPanel {
     ) {
         let is_edit = agent_name.is_some();
         let title = if is_edit {
-            "Edit Agent"
+            t!("settings.agents.dialog.edit.title").to_string()
         } else {
-            "Add New Agent"
+            t!("settings.agents.dialog.add.title").to_string()
         };
 
         // Get existing config if editing
@@ -296,8 +339,8 @@ impl SettingsPanel {
 
         // Create input states
         let name_input = cx.new(|cx| {
-            let mut state =
-                InputState::new(window, cx).placeholder("Agent name (e.g., Claude Code)");
+            let mut state = InputState::new(window, cx)
+                .placeholder(t!("settings.agents.input.name.placeholder").to_string());
             if let Some(name) = &agent_name {
                 state.set_value(name.clone(), window, cx);
             }
@@ -305,8 +348,8 @@ impl SettingsPanel {
         });
 
         let command_input = cx.new(|cx| {
-            let mut state =
-                InputState::new(window, cx).placeholder("Command (e.g., claude-code-acp)");
+            let mut state = InputState::new(window, cx)
+                .placeholder(t!("settings.agents.input.command.placeholder").to_string());
             if let Some(config) = &existing_config {
                 state.set_value(config.command.clone(), window, cx);
             }
@@ -315,7 +358,7 @@ impl SettingsPanel {
 
         let args_input = cx.new(|cx| {
             let mut state = InputState::new(window, cx)
-                .placeholder("Arguments (space-separated, e.g., --experimental-acp)");
+                .placeholder(t!("settings.agents.input.args.placeholder").to_string());
             if let Some(config) = &existing_config {
                 state.set_value(config.args.join(" "), window, cx);
             }
@@ -324,7 +367,7 @@ impl SettingsPanel {
 
         let env_input = cx.new(|cx| {
             let mut state = InputState::new(window, cx)
-                .placeholder("Environment variables (KEY=VALUE, one per line)");
+                .placeholder(t!("settings.agents.input.env.placeholder").to_string());
             if let Some(config) = &existing_config {
                 let env_text = config
                     .env
@@ -339,12 +382,16 @@ impl SettingsPanel {
 
         window.open_dialog(cx, move |dialog, _window, cx| {
             dialog
-                .title(title)
+                .title(title.clone())
                 .confirm()
                 .button_props(
                     DialogButtonProps::default()
-                        .ok_text(if is_edit { "Update" } else { "Add" })
-                        .cancel_text("Cancel"),
+                        .ok_text(if is_edit {
+                            t!("settings.agents.dialog.edit.ok").to_string()
+                        } else {
+                            t!("settings.agents.dialog.add.ok").to_string()
+                        })
+                        .cancel_text(t!("settings.agents.dialog.cancel").to_string()),
                 )
                 .on_ok({
                     let name_input = name_input.clone();
@@ -416,7 +463,7 @@ impl SettingsPanel {
                             v_flex()
                                 .gap_2()
                                 .child(
-                                    Label::new("Agent Name")
+                                    Label::new(t!("settings.agents.field.name").to_string())
                                         .text_sm()
                                         .font_weight(gpui::FontWeight::SEMIBOLD),
                                 )
@@ -428,22 +475,26 @@ impl SettingsPanel {
                             v_flex()
                                 .gap_2()
                                 .child(
-                                    Label::new("Command")
-                                        .text_sm()
-                                        .font_weight(gpui::FontWeight::SEMIBOLD),
+                                    Label::new(
+                                        t!("settings.agents.field.command_label").to_string(),
+                                    )
+                                    .text_sm()
+                                    .font_weight(gpui::FontWeight::SEMIBOLD),
                                 )
                                 .child(Input::new(&command_input))
                                 .child(
-                                    Label::new("Full path or command name in PATH")
-                                        .text_xs()
-                                        .text_color(cx.theme().muted_foreground),
+                                    Label::new(
+                                        t!("settings.agents.field.command_help").to_string(),
+                                    )
+                                    .text_xs()
+                                    .text_color(cx.theme().muted_foreground),
                                 ),
                         )
                         .child(
                             v_flex()
                                 .gap_2()
                                 .child(
-                                    Label::new("Arguments (optional)")
+                                    Label::new(t!("settings.agents.field.args_label").to_string())
                                         .text_sm()
                                         .font_weight(gpui::FontWeight::SEMIBOLD),
                                 )
@@ -453,13 +504,13 @@ impl SettingsPanel {
                             v_flex()
                                 .gap_2()
                                 .child(
-                                    Label::new("Environment Variables (optional)")
+                                    Label::new(t!("settings.agents.field.env_label").to_string())
                                         .text_sm()
                                         .font_weight(gpui::FontWeight::SEMIBOLD),
                                 )
                                 .child(Input::new(&env_input))
                                 .child(
-                                    Label::new("One per line, format: KEY=VALUE")
+                                    Label::new(t!("settings.agents.field.env_help").to_string())
                                         .text_xs()
                                         .text_color(cx.theme().muted_foreground),
                                 ),
@@ -478,13 +529,13 @@ impl SettingsPanel {
         window.open_dialog(cx, move |dialog, _window, _cx| {
             let name = agent_name.clone();
             dialog
-                .title("Confirm Delete")
+                .title(t!("settings.agents.dialog.delete.title").to_string())
                 .confirm()
                 .button_props(
                     DialogButtonProps::default()
-                        .ok_text("Delete")
+                        .ok_text(t!("settings.agents.dialog.delete.ok").to_string())
                         .ok_variant(gpui_component::button::ButtonVariant::Danger)
-                        .cancel_text("Cancel")
+                        .cancel_text(t!("settings.agents.dialog.cancel").to_string()),
                 )
                 .on_ok(move |_, window, cx| {
                     log::info!("Deleting agent: {}", name);
@@ -492,14 +543,13 @@ impl SettingsPanel {
                     true
                 })
                 .child(
-                    v_flex()
-                        .w_full()
-                        .gap_2()
-                        .p_4()
-                        .child(Label::new(format!(
-                            "Are you sure you want to delete the agent \"{}\"?\n\nThis action cannot be undone.",
-                            agent_name
-                        )).text_sm())
+                    v_flex().w_full().gap_2().p_4().child(
+                        Label::new(
+                            t!("settings.agents.dialog.delete.message", name = agent_name)
+                                .to_string(),
+                        )
+                        .text_sm(),
+                    ),
                 )
         });
     }
@@ -511,8 +561,11 @@ impl SettingsPanel {
         // Use rfd to open file dialog
         cx.spawn(async move |_this, cx| {
             let task = rfd::AsyncFileDialog::new()
-                .set_title("Select Config File")
-                .add_filter("JSON", &["json"])
+                .set_title(t!("settings.agents.config.dialog.title").to_string())
+                .add_filter(
+                    t!("settings.agents.config.dialog.filter_json").to_string(),
+                    &["json"],
+                )
                 .set_file_name("config.json")
                 .pick_file();
 

@@ -5,6 +5,7 @@ use gpui_component::{
     input::InputState,
     setting::{SettingPage, Settings},
 };
+use rust_i18n::t;
 use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
@@ -73,7 +74,7 @@ impl SettingsPanel {
                     hard_tabs: false,
                 })
                 .soft_wrap(false)
-                .placeholder("Paste MCP server JSON configuration here...")
+                .placeholder(t!("settings.mcp.json.placeholder").to_string())
         });
 
         // System prompts input states

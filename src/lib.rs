@@ -8,6 +8,9 @@ mod reqwest_client;
 mod schemas;
 mod utils;
 pub mod workspace;
+
+rust_i18n::i18n!("locales", fallback = "en");
+
 pub use app::key_binding;
 pub use assets::Assets;
 

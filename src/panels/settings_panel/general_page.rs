@@ -6,6 +6,7 @@ use gpui_component::{
     h_flex,
     setting::{NumberFieldOptions, SettingField, SettingGroup, SettingItem, SettingPage},
 };
+use rust_i18n::t;
 
 use super::panel::SettingsPanel;
 use super::types::AppSettings;
@@ -14,87 +15,129 @@ impl SettingsPanel {
     pub fn general_page(&self, _view: &Entity<Self>, resettable: bool) -> SettingPage {
         let default_settings = AppSettings::default();
 
-        SettingPage::new("General")
+        SettingPage::new(t!("settings.general.title").to_string())
             .resettable(resettable)
             .default_open(true)
             .groups(vec![
-                SettingGroup::new().title("Appearance").items(vec![
-                    SettingItem::new(
-                        "Dark Mode",
-                        SettingField::switch(
-                            |cx: &App| cx.theme().mode.is_dark(),
-                            |val: bool, cx: &mut App| {
-                                let mode = if val {
-                                    ThemeMode::Dark
-                                } else {
-                                    ThemeMode::Light
-                                };
-                                Theme::global_mut(cx).mode = mode;
-                                Theme::change(mode, None, cx);
-                            },
-                        )
-                        .default_value(false),
-                    )
-                    .description("Switch between light and dark themes."),
-                    SettingItem::new(
-                        "Auto Switch Theme",
-                        SettingField::checkbox(
-                            |cx: &App| AppSettings::global(cx).auto_switch_theme,
-                            |val: bool, cx: &mut App| {
-                                AppSettings::global_mut(cx).auto_switch_theme = val;
-                            },
-                        )
-                        .default_value(default_settings.auto_switch_theme),
-                    )
-                    .description("Automatically switch theme based on system settings."),
-                    SettingItem::new(
-                        "resettable",
-                        SettingField::switch(
-                            |cx: &App| AppSettings::global(cx).resettable,
-                            |checked: bool, cx: &mut App| {
-                                AppSettings::global_mut(cx).resettable = checked
-                            },
-                        ),
-                    )
-                    .description("Enable/Disable reset button for settings."),
-                    SettingItem::new(
-                        "Group Variant",
-                        SettingField::dropdown(
-                            vec![
-                                (GroupBoxVariant::Normal.as_str().into(), "Normal".into()),
-                                (GroupBoxVariant::Outline.as_str().into(), "Outline".into()),
-                                (GroupBoxVariant::Fill.as_str().into(), "Fill".into()),
-                            ],
-                            |cx: &App| AppSettings::global(cx).group_variant.clone(),
-                            |val: SharedString, cx: &mut App| {
-                                AppSettings::global_mut(cx).group_variant = val;
-                            },
-                        )
-                        .default_value(default_settings.group_variant),
-                    )
-                    .description("Select the variant for setting groups."),
-                    SettingItem::new(
-                        "Group Size",
-                        SettingField::dropdown(
-                            vec![
-                                (Size::Medium.as_str().into(), "Medium".into()),
-                                (Size::Small.as_str().into(), "Small".into()),
-                                (Size::XSmall.as_str().into(), "XSmall".into()),
-                            ],
-                            |cx: &App| AppSettings::global(cx).size.clone(),
-                            |val: SharedString, cx: &mut App| {
-                                AppSettings::global_mut(cx).size = val;
-                            },
-                        )
-                        .default_value(default_settings.size),
-                    )
-                    .description("Select the size for the setting group."),
-                ]),
                 SettingGroup::new()
-                    .title("Font")
+                    .title(t!("settings.general.group.appearance").to_string())
+                    .items(vec![
+                        SettingItem::new(
+                            t!("settings.general.appearance.dark_mode.label").to_string(),
+                            SettingField::switch(
+                                |cx: &App| cx.theme().mode.is_dark(),
+                                |val: bool, cx: &mut App| {
+                                    let mode = if val {
+                                        ThemeMode::Dark
+                                    } else {
+                                        ThemeMode::Light
+                                    };
+                                    Theme::global_mut(cx).mode = mode;
+                                    Theme::change(mode, None, cx);
+                                },
+                            )
+                            .default_value(false),
+                        )
+                        .description(
+                            t!("settings.general.appearance.dark_mode.description").to_string(),
+                        ),
+                        SettingItem::new(
+                            t!("settings.general.appearance.auto_switch.label").to_string(),
+                            SettingField::checkbox(
+                                |cx: &App| AppSettings::global(cx).auto_switch_theme,
+                                |val: bool, cx: &mut App| {
+                                    AppSettings::global_mut(cx).auto_switch_theme = val;
+                                },
+                            )
+                            .default_value(default_settings.auto_switch_theme),
+                        )
+                        .description(
+                            t!("settings.general.appearance.auto_switch.description").to_string(),
+                        ),
+                        SettingItem::new(
+                            t!("settings.general.appearance.resettable.label").to_string(),
+                            SettingField::switch(
+                                |cx: &App| AppSettings::global(cx).resettable,
+                                |checked: bool, cx: &mut App| {
+                                    AppSettings::global_mut(cx).resettable = checked
+                                },
+                            ),
+                        )
+                        .description(
+                            t!("settings.general.appearance.resettable.description").to_string(),
+                        ),
+                        SettingItem::new(
+                            t!("settings.general.appearance.group_variant.label").to_string(),
+                            SettingField::dropdown(
+                                vec![
+                                    (
+                                        GroupBoxVariant::Normal.as_str().into(),
+                                        t!("settings.general.appearance.group_variant.normal")
+                                            .to_string()
+                                            .into(),
+                                    ),
+                                    (
+                                        GroupBoxVariant::Outline.as_str().into(),
+                                        t!("settings.general.appearance.group_variant.outline")
+                                            .to_string()
+                                            .into(),
+                                    ),
+                                    (
+                                        GroupBoxVariant::Fill.as_str().into(),
+                                        t!("settings.general.appearance.group_variant.fill")
+                                            .to_string()
+                                            .into(),
+                                    ),
+                                ],
+                                |cx: &App| AppSettings::global(cx).group_variant.clone(),
+                                |val: SharedString, cx: &mut App| {
+                                    AppSettings::global_mut(cx).group_variant = val;
+                                },
+                            )
+                            .default_value(default_settings.group_variant),
+                        )
+                        .description(
+                            t!("settings.general.appearance.group_variant.description").to_string(),
+                        ),
+                        SettingItem::new(
+                            t!("settings.general.appearance.group_size.label").to_string(),
+                            SettingField::dropdown(
+                                vec![
+                                    (
+                                        Size::Medium.as_str().into(),
+                                        t!("settings.general.appearance.group_size.medium")
+                                            .to_string()
+                                            .into(),
+                                    ),
+                                    (
+                                        Size::Small.as_str().into(),
+                                        t!("settings.general.appearance.group_size.small")
+                                            .to_string()
+                                            .into(),
+                                    ),
+                                    (
+                                        Size::XSmall.as_str().into(),
+                                        t!("settings.general.appearance.group_size.xsmall")
+                                            .to_string()
+                                            .into(),
+                                    ),
+                                ],
+                                |cx: &App| AppSettings::global(cx).size.clone(),
+                                |val: SharedString, cx: &mut App| {
+                                    AppSettings::global_mut(cx).size = val;
+                                },
+                            )
+                            .default_value(default_settings.size),
+                        )
+                        .description(
+                            t!("settings.general.appearance.group_size.description").to_string(),
+                        ),
+                    ]),
+                SettingGroup::new()
+                    .title(t!("settings.general.group.font").to_string())
                     .item(
                         SettingItem::new(
-                            "Font Family",
+                            t!("settings.general.font.family.label").to_string(),
                             SettingField::dropdown(
                                 vec![
                                     ("Arial".into(), "Arial".into()),
@@ -109,11 +152,11 @@ impl SettingsPanel {
                             )
                             .default_value(default_settings.font_family),
                         )
-                        .description("Select the font family for the story."),
+                        .description(t!("settings.general.font.family.description").to_string()),
                     )
                     .item(
                         SettingItem::new(
-                            "Font Size",
+                            t!("settings.general.font.size.label").to_string(),
                             SettingField::number_input(
                                 NumberFieldOptions {
                                     min: 8.0,
@@ -128,11 +171,11 @@ impl SettingsPanel {
                             )
                             .default_value(default_settings.font_size),
                         )
-                        .description("Adjust the font size for better readability."),
+                        .description(t!("settings.general.font.size.description").to_string()),
                     )
                     .item(
                         SettingItem::new(
-                            "Line Height",
+                            t!("settings.general.font.line_height.label").to_string(),
                             SettingField::number_input(
                                 NumberFieldOptions {
                                     min: 8.0,
@@ -146,45 +189,50 @@ impl SettingsPanel {
                             )
                             .default_value(default_settings.line_height),
                         )
-                        .description("Adjust the line height for better readability."),
+                        .description(
+                            t!("settings.general.font.line_height.description").to_string(),
+                        ),
                     ),
-                SettingGroup::new().title("Other").items(vec![
-                    SettingItem::render(|options, _, _| {
-                        h_flex()
-                            .w_full()
-                            .justify_between()
-                            .flex_wrap()
-                            .gap_3()
-                            .child("This is a custom element item by use SettingItem::element.")
-                            .child(
-                                Button::new("action")
-                                    .icon(IconName::Globe)
-                                    .label("Repository...")
-                                    .outline()
-                                    .with_size(options.size)
-                                    .on_click(|_, _, cx| {
-                                        cx.open_url("https://github.com/sxhxliang/agent_studio");
-                                    }),
+                SettingGroup::new()
+                    .title(t!("settings.general.group.other").to_string())
+                    .items(vec![
+                        SettingItem::render(|options, _, _| {
+                            h_flex()
+                                .w_full()
+                                .justify_between()
+                                .flex_wrap()
+                                .gap_3()
+                                .child(t!("settings.general.other.custom_item").to_string())
+                                .child(
+                                    Button::new("action")
+                                        .icon(IconName::Globe)
+                                        .label(
+                                            t!("settings.general.other.repository.button")
+                                                .to_string(),
+                                        )
+                                        .outline()
+                                        .with_size(options.size)
+                                        .on_click(|_, _, cx| {
+                                            cx.open_url(
+                                                "https://github.com/sxhxliang/agent_studio",
+                                            );
+                                        }),
+                                )
+                        }),
+                        SettingItem::new(
+                            t!("settings.general.other.cli_path.label").to_string(),
+                            SettingField::input(
+                                |cx: &App| AppSettings::global(cx).cli_path.clone(),
+                                |val: SharedString, cx: &mut App| {
+                                    println!("cli-path set value: {}", val);
+                                    AppSettings::global_mut(cx).cli_path = val;
+                                },
                             )
-                    }),
-                    SettingItem::new(
-                        "CLI Path",
-                        SettingField::input(
-                            |cx: &App| AppSettings::global(cx).cli_path.clone(),
-                            |val: SharedString, cx: &mut App| {
-                                println!("cli-path set value: {}", val);
-                                AppSettings::global_mut(cx).cli_path = val;
-                            },
+                            .default_value(default_settings.cli_path),
                         )
-                        .default_value(default_settings.cli_path),
-                    )
-                    .layout(Axis::Vertical)
-                    .description(
-                        "Path to the CLI executable. \n\
-                    This item uses Vertical layout. The title,\
-                    description, and field are all aligned vertically with width 100%.",
-                    ),
-                ]),
+                        .layout(Axis::Vertical)
+                        .description(t!("settings.general.other.cli_path.description").to_string()),
+                    ]),
             ])
     }
 }
