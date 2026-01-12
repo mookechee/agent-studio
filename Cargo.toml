@@ -34,8 +34,8 @@ unstable = []
 [dependencies]
 # Core GPUI framework
 gpui = { git = "https://github.com/zed-industries/zed" }
-gpui-component = { git = "https://github.com/longbridge/gpui-component"}
-gpui_term = { path = "../../gpui-term/crates/gpui_term" }
+gpui-component = { git = "https://github.com/sxhxliang/gpui-component", branch = "dev" }
+gpui_term = {path = "../gpui-term/crates/gpui_term"}
 # gpui-component = { path = "../crates/ui" }
 
 # Agent communication
@@ -118,9 +118,11 @@ too_many_arguments = "allow"
 mutable_key_type = "allow"
 
 [profile.dev]
-codegen-units = 16
-debug = "limited"
+opt-level = 1            # 轻量优化，平衡编译速度和文件大小
+codegen-units = 16       # 保持快速编译
+debug = "limited"        # 有限的调试信息
 split-debuginfo = "unpacked"
+strip = "debuginfo"      # 移除调试信息但保留符号表
 
 [profile.dev.package]
 resvg = { opt-level = 3 }
@@ -129,6 +131,8 @@ taffy = { opt-level = 3 }
 ttf-parser = { opt-level = 3 }
 
 [profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
+opt-level = "z"          # 优化目标为大小 (size optimization)
+lto = "fat"              # 完整的链接时优化 (full LTO)
+codegen-units = 1        # 最小化编译单元以获得最佳优化
+strip = true             # 自动移除符号和调试信息
+panic = "abort"          # 使用 abort 代替 unwind，减少二进制大小

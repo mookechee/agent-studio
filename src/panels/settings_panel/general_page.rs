@@ -232,6 +232,19 @@ impl SettingsPanel {
                         )
                         .layout(Axis::Vertical)
                         .description(t!("settings.general.other.cli_path.description").to_string()),
+                        SettingItem::new(
+                            t!("settings.general.other.nodejs_path.label").to_string(),
+                            SettingField::input(
+                                |cx: &App| AppSettings::global(cx).nodejs_path.clone(),
+                                |val: SharedString, cx: &mut App| {
+                                    log::info!("nodejs_path set to: {}", val);
+                                    AppSettings::global_mut(cx).nodejs_path = val;
+                                },
+                            )
+                            .default_value(default_settings.nodejs_path),
+                        )
+                        .layout(Axis::Vertical)
+                        .description(t!("settings.general.other.nodejs_path.description").to_string()),
                     ]),
             ])
     }

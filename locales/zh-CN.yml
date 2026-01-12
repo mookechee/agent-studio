@@ -173,6 +173,8 @@ settings.general.other.custom_item: "这是一个使用 SettingItem::element 的
 settings.general.other.repository.button: "仓库..."
 settings.general.other.cli_path.label: "CLI 路径"
 settings.general.other.cli_path.description: "CLI 可执行文件路径。该项使用纵向布局。"
+settings.general.other.nodejs_path.label: "Node.js 路径"
+settings.general.other.nodejs_path.description: "自定义 Node.js 可执行文件路径。留空则自动从 PATH 检测。"
 
 settings.agents.title: "代理服务"
 settings.agents.group.configuration: "配置"

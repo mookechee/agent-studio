@@ -45,11 +45,25 @@ fn main() {
 
             println!("Config loaded from {}", config_path.display());
 
+            // Inject nodejs_path from AppSettings into agent configs
+            let nodejs_path = cx.update(|cx| {
+                agentx::AppSettings::global(cx).nodejs_path.clone()
+            });
+
+            let mut agent_servers = config.agent_servers.clone();
+            if !nodejs_path.is_empty() {
+                log::info!("Using custom Node.js path from settings: {}", nodejs_path);
+                // Inject nodejs_path into all agent configs
+                for (_name, agent_config) in agent_servers.iter_mut() {
+                    agent_config.nodejs_path = Some(nodejs_path.to_string());
+                }
+            }
+
             // Initialize agent manager (this happens in background after GUI is shown)
             let permission_store = Arc::new(PermissionStore::default());
 
             match AgentManager::initialize(
-                config.agent_servers.clone(),
+                agent_servers,
                 permission_store.clone(),
                 session_bus.clone(),
                 permission_bus.clone(),
@@ -90,6 +104,7 @@ fn main() {
                 }
                 Err(e) => {
                     eprintln!("Failed to initialize agent manager: {}", e);
+                    eprintln!("Please check if Node.js is installed or configure the Node.js path in Settings.");
                 }
             }
         })

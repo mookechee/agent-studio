@@ -480,6 +480,52 @@ async fn agent_event_loop(
     init_response: Arc<std::sync::RwLock<Option<acp::InitializeResponse>>>,
     proxy_config: ProxyConfig,
 ) -> Result<()> {
+    // Node.js environment validation
+    let requires_nodejs = config.command.ends_with(".js")
+        || config.command.ends_with(".ts")
+        || config.command.contains("node")
+        || config.command.contains("npx");
+
+    if requires_nodejs {
+        log::info!("Agent '{}' requires Node.js, validating environment...", agent_name);
+
+        use std::path::PathBuf;
+        use crate::core::nodejs::NodeJsChecker;
+
+        let custom_path = config.nodejs_path.as_ref().map(PathBuf::from);
+        let nodejs_checker = NodeJsChecker::new(custom_path);
+
+        match nodejs_checker.check_nodejs_available().await {
+            Ok(result) if result.available => {
+                log::info!(
+                    "Node.js found for '{}': {} ({})",
+                    agent_name,
+                    result.path.unwrap().display(),
+                    result.version.unwrap()
+                );
+            }
+            Ok(result) => {
+                let error_msg = format!(
+                    "Node.js required but not found for agent '{}'.\n\n{}",
+                    agent_name,
+                    result.install_hint.unwrap_or_default()
+                );
+                log::error!("{}", error_msg);
+                let _ = ready_tx.send(Err(anyhow!(error_msg.clone())));
+                return Err(anyhow!(error_msg));
+            }
+            Err(e) => {
+                let error_msg = format!(
+                    "Failed to validate Node.js for '{}': {}",
+                    agent_name, e
+                );
+                log::error!("{}", error_msg);
+                let _ = ready_tx.send(Err(anyhow!(error_msg.clone())));
+                return Err(anyhow!(error_msg));
+            }
+        }
+    }
+
     let mut command = if cfg!(target_os = "windows") {
         let mut shell_cmd = tokio::process::Command::new("cmd");
         let mut full_args = vec!["/C".to_string(), config.command.clone()];

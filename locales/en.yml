@@ -173,6 +173,8 @@ settings.general.other.custom_item: "This is a custom element item using Setting
 settings.general.other.repository.button: "Repository..."
 settings.general.other.cli_path.label: "CLI Path"
 settings.general.other.cli_path.description: "Path to the CLI executable. This item uses vertical layout."
+settings.general.other.nodejs_path.label: "Node.js Path"
+settings.general.other.nodejs_path.description: "Custom Node.js executable path. Leave empty to auto-detect from PATH."
 
 settings.agents.title: "Agent Servers"
 settings.agents.group.configuration: "Configuration"

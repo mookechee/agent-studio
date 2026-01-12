@@ -145,6 +145,10 @@ pub struct AgentProcessConfig {
     pub args: Vec<String>,
     #[serde(default)]
     pub env: HashMap<String, String>,
+
+    /// Custom Node.js path (populated at runtime from AppSettings)
+    #[serde(skip)]
+    pub nodejs_path: Option<String>,
 }
 
 /// Model configuration for LLM providers

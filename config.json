@@ -1,15 +1,13 @@
 {
   "agent_servers": {
-    "Claude Code": {
-      "command": "claude-code-acp",
-      "args": [],
+    "Claude": {
+      "command": "npx",
+      "args": ["@zed-industries/claude-code-acp"],
       "env": {}
     },
-    "Iflow": {
-      "command": "iflow",
-      "args": [
-        "--experimental-acp"
-      ],
+    "Codex": {
+      "command": "npx",
+      "args": ["@zed-industries/codex-acp"],
       "env": {}
     },
     "Gemini": {
@@ -17,9 +15,14 @@
       "args": ["--experimental-acp"],
       "env": {}
     },
-    "QwenCode": {
+    "Qwen": {
       "command": "qwen",
       "args": ["--experimental-acp"],
+      "env": {}
+    },
+    "Iflow": {
+      "command": "npx",
+      "args": ["@iflow-ai/iflow-cli", "--experimental-acp"],
       "env": {}
     }
   },

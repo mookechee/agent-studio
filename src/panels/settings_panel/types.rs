@@ -10,6 +10,8 @@ use serde::{Deserialize, Serialize};
 pub struct AppSettings {
     pub auto_switch_theme: bool,
     pub cli_path: SharedString,
+    #[serde(default)]
+    pub nodejs_path: SharedString,
     pub font_family: SharedString,
     pub font_size: f64,
     #[serde(default = "default_locale")]
@@ -38,6 +40,7 @@ impl Default for AppSettings {
         Self {
             auto_switch_theme: false,
             cli_path: "/usr/local/bin/bash".into(),
+            nodejs_path: "".into(),
             font_family: "Arial".into(),
             font_size: 14.0,
             locale: default_locale(),

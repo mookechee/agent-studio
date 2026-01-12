@@ -4,8 +4,10 @@
   "app_settings": {
     "auto_switch_theme": false,
     "cli_path": "/usr/local/bin/bash",
+    "nodejs_path": "",
     "font_family": "Arial",
     "font_size": 14.0,
+    "locale": "en",
     "line_height": 12.0,
     "notifications_enabled": true,
     "auto_update": true,

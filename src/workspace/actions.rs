@@ -939,6 +939,7 @@ pub fn add_agent(action: &AddAgent, cx: &mut App) {
         command: action.command.clone(),
         args: action.args.clone(),
         env: action.env.clone(),
+        nodejs_path: None,
     };
 
     let _ = cx
@@ -969,6 +970,7 @@ pub fn update_agent(action: &UpdateAgent, cx: &mut App) {
         command: action.command.clone(),
         args: action.args.clone(),
         env: action.env.clone(),
+        nodejs_path: None,
     };
 
     let _ = cx
