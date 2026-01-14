@@ -160,46 +160,26 @@ pub fn initialize_themes_dir() -> Result<PathBuf> {
     Ok(themes_dir)
 }
 
-/// Get state file path based on build mode
-/// - Debug mode: target/state.json
-/// - Release mode: <user_data_dir>/state.json
+/// Get state file path
+/// Always uses user data directory: <user_data_dir>/state.json
 pub fn get_state_file_path() -> PathBuf {
-    if cfg!(debug_assertions) {
-        PathBuf::from("target/state.json")
-    } else {
-        user_data_dir_or_temp().join("state.json")
-    }
+    user_data_dir_or_temp().join("state.json")
 }
 
-/// Get workspace config file path based on build mode
-/// - Debug mode: target/workspace-config.json
-/// - Release mode: <user_data_dir>/workspace-config.json
+/// Get workspace config file path
+/// Always uses user data directory: <user_data_dir>/workspace-config.json
 pub fn get_workspace_config_path() -> PathBuf {
-    if cfg!(debug_assertions) {
-        PathBuf::from("target/workspace-config.json")
-    } else {
-        user_data_dir_or_temp().join("workspace-config.json")
-    }
+    user_data_dir_or_temp().join("workspace-config.json")
 }
 
-/// Get docks layout file path based on build mode
-/// - Debug mode: target/docks-agentx.json
-/// - Release mode: <user_data_dir>/docks-agentx.json
+/// Get docks layout file path
+/// Always uses user data directory: <user_data_dir>/docks-agentx.json
 pub fn get_docks_layout_path() -> PathBuf {
-    if cfg!(debug_assertions) {
-        PathBuf::from("target/docks-agentx.json")
-    } else {
-        user_data_dir_or_temp().join("docks-agentx.json")
-    }
+    user_data_dir_or_temp().join("docks-agentx.json")
 }
 
-/// Get sessions directory path based on build mode
-/// - Debug mode: target/sessions
-/// - Release mode: <user_data_dir>/sessions
+/// Get sessions directory path
+/// Always uses user data directory: <user_data_dir>/sessions
 pub fn get_sessions_dir() -> PathBuf {
-    if cfg!(debug_assertions) {
-        PathBuf::from("target/sessions")
-    } else {
-        user_data_dir_or_temp().join("sessions")
-    }
+    user_data_dir_or_temp().join("sessions")
 }
