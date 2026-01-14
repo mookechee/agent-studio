@@ -36,6 +36,7 @@ pub struct AppState {
     /// Service layer
     agent_service: Option<Arc<AgentService>>,
     message_service: Option<Arc<MessageService>>,
+    persistence_service: Option<Arc<PersistenceService>>,
     workspace_service: Option<Arc<WorkspaceService>>,
     agent_config_service: Option<Arc<AgentConfigService>>,
     ai_service: Option<Arc<AiService>>,
@@ -65,6 +66,8 @@ impl AppState {
         let mut workspace_service = WorkspaceService::new(config_path);
         workspace_service.set_workspace_bus(workspace_bus.clone());
         let workspace_service = Arc::new(workspace_service);
+        let sessions_dir = crate::core::config_manager::get_sessions_dir();
+        let persistence_service = Arc::new(PersistenceService::new(sessions_dir));
 
         let state = Self {
             invisible_panels: cx.new(|_| Vec::new()),
@@ -80,6 +83,7 @@ impl AppState {
             welcome_session: None,
             agent_service: None,
             message_service: None,
+            persistence_service: Some(persistence_service),
             workspace_service: Some(workspace_service),
             agent_config_service: None,
             ai_service: None,
@@ -110,13 +114,16 @@ impl AppState {
 
         // Determine sessions directory path
         let sessions_dir = crate::core::config_manager::get_sessions_dir();
+        let persistence_service = self
+            .persistence_service
+            .get_or_insert_with(|| Arc::new(PersistenceService::new(sessions_dir)))
+            .clone();
 
         // Initialize services when agent_manager is set
         let mut agent_service = AgentService::new(manager.clone());
         agent_service.set_workspace_bus(self.workspace_bus.clone());
         let agent_service = Arc::new(agent_service);
 
-        let persistence_service = Arc::new(PersistenceService::new(sessions_dir));
         let message_service = Arc::new(MessageService::new(
             self.session_bus.clone(),
             agent_service.clone(),
@@ -224,6 +231,11 @@ impl AppState {
     /// Get the MessageService
     pub fn message_service(&self) -> Option<&Arc<MessageService>> {
         self.message_service.as_ref()
+    }
+
+    /// Get the PersistenceService
+    pub fn persistence_service(&self) -> Option<&Arc<PersistenceService>> {
+        self.persistence_service.as_ref()
     }
 
     /// Get the WorkspaceService

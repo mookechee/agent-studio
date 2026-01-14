@@ -13,11 +13,11 @@ use gpui_component::{
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 
-use crate::panels::conversation::ConversationPanel;
-use crate::panels::welcome_panel::WelcomePanel;
-use crate::panels::code_editor::CodeEditorPanel;
-use crate::panels::terminal_panel::TerminalPanel;
-use crate::{AppState, ToolCallDetailPanel};
+use crate::panels::{
+    CodeEditorPanel, ConversationPanel, SessionManagerPanel, SettingsPanel, TaskPanel,
+    TerminalPanel, ToolCallDetailPanel, WelcomePanel,
+};
+use crate::AppState;
 use crate::{ShowPanelInfo, ToggleSearch};
 
 #[derive(IntoElement)]
@@ -350,6 +350,36 @@ impl DockPanelContainer {
         view
     }
 
+    fn panel_for_welcome_with_dir(
+        workspace_id: Option<String>,
+        working_directory: std::path::PathBuf,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Entity<Self> {
+        let name = WelcomePanel::title();
+        let title_key = WelcomePanel::title_key();
+        let description = WelcomePanel::description();
+        let story = WelcomePanel::view_with_workspace_and_dir(workspace_id, working_directory, window, cx);
+        let story_klass = WelcomePanel::klass();
+
+        let view = cx.new(|cx| {
+            let mut container = Self::new(cx)
+                .story(story.into(), story_klass)
+                .on_active(WelcomePanel::on_active_any);
+            container.focus_handle = cx.focus_handle();
+            container.closable = WelcomePanel::closable();
+            container.zoomable = WelcomePanel::zoomable();
+            container.name = name.into();
+            container.title_key = title_key.map(SharedString::from);
+            container.description = description.into();
+            container.title_bg = WelcomePanel::title_bg();
+            container.paddings = WelcomePanel::paddings();
+            container
+        });
+
+        view
+    }
+
     /// 创建带指定工作目录的终端面板
     pub fn panel_for_terminal_with_cwd(
         working_directory: std::path::PathBuf,
@@ -380,6 +410,87 @@ impl DockPanelContainer {
         });
 
         view
+    }
+
+    pub fn panel_from_state(
+        story_state: &DockPanelState,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Entity<Self> {
+        fn canonicalize_path(path: &str) -> Option<std::path::PathBuf> {
+            std::path::PathBuf::from(path).canonicalize().ok()
+        }
+
+        match story_state.story_klass.as_ref() {
+            "TaskPanel" => Self::panel::<TaskPanel>(window, cx),
+            "SessionManagerPanel" => Self::panel::<SessionManagerPanel>(window, cx),
+            "SettingsPanel" => Self::panel::<SettingsPanel>(window, cx),
+            "ToolCallDetailPanel" => Self::panel::<ToolCallDetailPanel>(window, cx),
+            "ConversationPanel" => {
+                if let Some(session_id) = story_state
+                    .session_id
+                    .as_deref()
+                    .filter(|id| !id.is_empty())
+                {
+                    Self::panel_for_session(session_id.to_string(), window, cx)
+                } else {
+                    Self::panel::<ConversationPanel>(window, cx)
+                }
+            }
+            "CodeEditorPanel" => {
+                if let Some(working_dir) = story_state
+                    .working_directory
+                    .as_deref()
+                    .filter(|path| !path.is_empty())
+                    .and_then(canonicalize_path)
+                {
+                    Self::panel_for_code_editor_with_cwd(working_dir, window, cx)
+                } else {
+                    Self::panel::<CodeEditorPanel>(window, cx)
+                }
+            }
+            "TerminalPanel" => {
+                if let Some(working_dir) = story_state
+                    .working_directory
+                    .as_deref()
+                    .filter(|path| !path.is_empty())
+                    .and_then(canonicalize_path)
+                {
+                    Self::panel_for_terminal_with_cwd(working_dir, window, cx)
+                } else {
+                    Self::panel::<TerminalPanel>(window, cx)
+                }
+            }
+            "WelcomePanel" => {
+                let working_dir = story_state
+                    .working_directory
+                    .as_deref()
+                    .filter(|path| !path.is_empty())
+                    .and_then(canonicalize_path);
+                let workspace_id = story_state.workspace_id.clone();
+
+                match (workspace_id, working_dir) {
+                    (Some(workspace_id), Some(working_dir)) => {
+                        Self::panel_for_welcome_with_dir(
+                            Some(workspace_id),
+                            working_dir,
+                            window,
+                            cx,
+                        )
+                    }
+                    (Some(workspace_id), None) => {
+                        Self::panel_for_workspace(workspace_id, window, cx)
+                    }
+                    (None, Some(working_dir)) => {
+                        Self::panel_for_welcome_with_dir(None, working_dir, window, cx)
+                    }
+                    (None, None) => Self::panel::<WelcomePanel>(window, cx),
+                }
+            }
+            _ => {
+                unreachable!("Invalid story klass: {}", story_state.story_klass.as_ref());
+            }
+        }
     }
 
     /// 创建带指定工作目录的代码编辑器面板

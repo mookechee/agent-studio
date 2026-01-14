@@ -19,7 +19,7 @@ pub use assets::get_default_config;
 mod test_mock_data;
 
 // Re-export from panels module
-use crate::panels::{DockPanel, DockPanelContainer, DockPanelState};
+use crate::panels::{DockPanelContainer, DockPanelState};
 pub use panels::{
     AppSettings, CodeEditorPanel, ConversationPanel, SessionManagerPanel, SettingsPanel, TaskPanel,
     TerminalPanel, ToolCallDetailPanel, WelcomePanel,
@@ -72,7 +72,7 @@ pub use agent_client_protocol::{
 
 use gpui_component::{
     Root, TitleBar,
-    dock::{PanelControl, PanelInfo, register_panel},
+    dock::{PanelInfo, register_panel},
     v_flex,
 };
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
@@ -224,162 +224,8 @@ pub fn init(cx: &mut App) {
             }
         };
 
-        let view = cx.new(|cx| {
-            let (title, description, closable, zoomable, story, on_active, paddings) =
-                create_panel_view(
-                    &story_state,
-                    window,
-                    cx,
-                );
-
-            let mut container = DockPanelContainer::new(cx)
-                .story(story, story_state.story_klass)
-                .on_active(on_active);
-
-            cx.on_focus_in(
-                &container.focus_handle,
-                window,
-                |this: &mut DockPanelContainer, _, _| {
-                    println!("DockPanelContainer focus in: {}", this.name);
-                },
-            )
-            .detach();
-
-            container.name = title.into();
-            container.description = description.into();
-            container.closable = closable;
-            container.zoomable = zoomable;
-            container.paddings = paddings;
-            container
-        });
-        Box::new(view)
+        Box::new(DockPanelContainer::panel_from_state(&story_state, window, cx))
     });
 
     cx.activate(true);
-}
-
-fn create_panel_view(
-    story_state: &DockPanelState,
-    window: &mut Window,
-    cx: &mut App,
-) -> (
-    &'static str,
-    &'static str,
-    bool,
-    Option<PanelControl>,
-    AnyView,
-    fn(AnyView, bool, &mut Window, &mut App),
-    Pixels,
-) {
-    macro_rules! story {
-        ($klass:tt) => {
-            (
-                $klass::title(),
-                $klass::description(),
-                $klass::closable(),
-                $klass::zoomable(),
-                $klass::view(window, cx).into(),
-                $klass::on_active_any,
-                $klass::paddings(),
-            )
-        };
-    }
-
-    match story_state.story_klass.to_string().as_str() {
-        "TaskPanel" => story!(TaskPanel),
-        "CodeEditorPanel" => {
-            // Use working_directory from story_state if available
-            let view = if let Some(working_dir_str) = &story_state.working_directory {
-                if let Ok(working_dir) = std::path::PathBuf::from(working_dir_str).canonicalize() {
-                    CodeEditorPanel::view_with_working_dir(window, Some(working_dir), cx)
-                } else {
-                    CodeEditorPanel::view(window, cx)
-                }
-            } else {
-                CodeEditorPanel::view(window, cx)
-            };
-
-            (
-                CodeEditorPanel::title(),
-                CodeEditorPanel::description(),
-                CodeEditorPanel::closable(),
-                CodeEditorPanel::zoomable(),
-                view.into(),
-                CodeEditorPanel::on_active_any,
-                CodeEditorPanel::paddings(),
-            )
-        }
-        "ConversationPanel" => (
-            ConversationPanel::title(),
-            ConversationPanel::description(),
-            ConversationPanel::closable(),
-            ConversationPanel::zoomable(),
-            match story_state.session_id.clone() {
-                Some(session_id) => ConversationPanel::view_for_session(session_id, window, cx),
-                None => ConversationPanel::view(window, cx),
-            }
-            .into(),
-            ConversationPanel::on_active_any,
-            ConversationPanel::paddings(),
-        ),
-        "SessionManagerPanel" => story!(SessionManagerPanel),
-        "TerminalPanel" => {
-            // Use working_directory from story_state if available
-            let view = if let Some(working_dir_str) = &story_state.working_directory {
-                if let Ok(working_dir) = std::path::PathBuf::from(working_dir_str).canonicalize() {
-                    TerminalPanel::view_with_cwd(working_dir, window, cx)
-                } else {
-                    TerminalPanel::view(window, cx)
-                }
-            } else {
-                TerminalPanel::view(window, cx)
-            };
-
-            (
-                TerminalPanel::title(),
-                TerminalPanel::description(),
-                TerminalPanel::closable(),
-                TerminalPanel::zoomable(),
-                view.into(),
-                TerminalPanel::on_active_any,
-                TerminalPanel::paddings(),
-            )
-        }
-        "WelcomePanel" => {
-            // Use workspace_id and working_directory from story_state if available
-            let view = if let Some(working_dir_str) = &story_state.working_directory {
-                if let Ok(working_dir) = std::path::PathBuf::from(working_dir_str).canonicalize() {
-                    WelcomePanel::view_with_workspace_and_dir(
-                        story_state.workspace_id.clone(),
-                        working_dir,
-                        window,
-                        cx,
-                    )
-                } else if let Some(workspace_id) = story_state.workspace_id.clone() {
-                    WelcomePanel::view_for_workspace(workspace_id, window, cx)
-                } else {
-                    WelcomePanel::view(window, cx)
-                }
-            } else if let Some(workspace_id) = story_state.workspace_id.clone() {
-                WelcomePanel::view_for_workspace(workspace_id, window, cx)
-            } else {
-                WelcomePanel::view(window, cx)
-            };
-
-            (
-                WelcomePanel::title(),
-                WelcomePanel::description(),
-                WelcomePanel::closable(),
-                WelcomePanel::zoomable(),
-                view.into(),
-                WelcomePanel::on_active_any,
-                WelcomePanel::paddings(),
-            )
-        }
-        "SettingsPanel" => story!(SettingsPanel),
-        "ToolCallDetailPanel" => story!(ToolCallDetailPanel),
-        _ => {
-            unreachable!("Invalid story klass: {}", story_state.story_klass)
-        }
-    }
 }
