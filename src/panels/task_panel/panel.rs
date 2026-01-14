@@ -1177,7 +1177,10 @@ impl TaskPanel {
             .hover(|s| s.bg(theme.accent.opacity(0.3)))
             .on_click(cx.listener(move |_this, _, window, cx| {
                 window.dispatch_action(
-                    Box::new(PanelAction::show_welcome(Some(workspace_id.clone()))),
+                    Box::new(PanelAction::add_welcome(
+                        Some(workspace_id.clone()),
+                        gpui_component::dock::DockPlacement::Center,
+                    )),
                     cx,
                 );
             }))

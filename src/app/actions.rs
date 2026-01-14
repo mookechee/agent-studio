@@ -84,6 +84,13 @@ impl PanelAction {
         })
     }
 
+    pub fn add_welcome(workspace_id: Option<String>, placement: DockPlacement) -> Self {
+        Self(PanelCommand::Add {
+            panel: PanelKind::Welcome { workspace_id },
+            placement,
+        })
+    }
+
     pub fn show_welcome(workspace_id: Option<String>) -> Self {
         Self(PanelCommand::Show(PanelKind::Welcome { workspace_id }))
     }

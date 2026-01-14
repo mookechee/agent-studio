@@ -348,7 +348,7 @@ impl DockWorkspace {
                     self.add_code_editor_panel_to(working_directory.clone(), *placement, window, cx);
                 }
                 PanelKind::Welcome { workspace_id } => {
-                    self.show_welcome_panel(workspace_id.clone(), window, cx);
+                    self.add_welcome_panel_to(workspace_id.clone(), *placement, window, cx);
                 }
                 PanelKind::ToolCallDetail {
                     tool_call_id: _,
@@ -434,6 +434,41 @@ impl DockWorkspace {
             if !was_dock_open {
                 dock_area.toggle_dock(placement, window, cx);
                 log::debug!("Auto-expanded {:?} dock for conversation panel", placement);
+            }
+        });
+    }
+
+    fn add_welcome_panel_to(
+        &mut self,
+        workspace_id: Option<String>,
+        placement: DockPlacement,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        // Create WelcomePanel with optional workspace_id
+        let panel = if let Some(workspace_id) = workspace_id {
+            Arc::new(DockPanelContainer::panel_for_workspace(workspace_id, window, cx))
+        } else {
+            Arc::new(DockPanelContainer::panel::<WelcomePanel>(window, cx))
+        };
+
+        self.dock_area.update(cx, |dock_area, cx| {
+            // Check if dock is open BEFORE adding panel
+            let was_dock_open = dock_area.is_dock_open(placement, cx);
+
+            // Add panel to dock
+            dock_area.add_panel(panel, placement, None, window, cx);
+            // Collapse right and bottom docks if they are open
+            if dock_area.is_dock_open(DockPlacement::Right, cx) {
+                dock_area.toggle_dock(DockPlacement::Right, window, cx);
+            }
+            if dock_area.is_dock_open(DockPlacement::Bottom, cx) {
+                dock_area.toggle_dock(DockPlacement::Bottom, window, cx);
+            }
+            // If dock was closed, toggle it to open it
+            if !was_dock_open {
+                dock_area.toggle_dock(placement, window, cx);
+                log::debug!("Auto-expanded {:?} dock for welcome panel", placement);
             }
         });
     }
