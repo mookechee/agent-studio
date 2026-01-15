@@ -43,6 +43,10 @@ impl crate::panels::dock_panel::DockPanel for SettingsPanel {
         "Settings"
     }
 
+    fn title_key() -> Option<&'static str> {
+        Some("settings.title")
+    }
+
     fn description() -> &'static str {
         "A collection of settings groups and items for the application."
     }

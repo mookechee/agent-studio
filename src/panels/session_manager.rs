@@ -26,6 +26,10 @@ impl DockPanel for SessionManagerPanel {
         "Session Manager"
     }
 
+    fn title_key() -> Option<&'static str> {
+        Some("session_manager.title")
+    }
+
     fn description() -> &'static str {
         "Manage all agent sessions"
     }

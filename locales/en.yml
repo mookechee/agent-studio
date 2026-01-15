@@ -116,9 +116,11 @@ task_panel.status.completed: "Completed"
 task_panel.status.failed: "Failed"
 task_panel.status.closed: "Closed"
 
+conversation.title: "Conversation"
 conversation.empty: "No messages yet"
 
-welcome.title: "Welcome to Agent Studio"
+welcome.title: "New Session"
+welcome.main_title: "Welcome to Agent Studio"
 welcome.subtitle.current_workspace: "Current workspace: %{workspace} - Start by describing what you'd like to build"
 welcome.subtitle.start: "Start by describing what you'd like to build"
 welcome.subtitle.no_workspace: "Please add a workspace first by clicking 'Add repository' in the left panel"
@@ -130,6 +132,15 @@ welcome.session.creating: "Creating session..."
 welcome.session.item: "Session %{id}"
 welcome.loading: "Loading..."
 
+code_editor.title: "Code Editor"
+
+terminal.title: "Terminal"
+
+session_manager.title: "Session Manager"
+
+tool_call_detail_panel.title: "Details"
+
+settings.title: "Settings"
 settings.about.title: "About"
 settings.about.app_name: "Agent Studio"
 settings.about.description: "Rust GUI components for building fantastic cross-platform desktop applications with GPUI."

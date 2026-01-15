@@ -44,6 +44,10 @@ impl crate::panels::dock_panel::DockPanel for CodeEditorPanel {
         "CodeEditor"
     }
 
+    fn title_key() -> Option<&'static str> {
+        Some("code_editor.title")
+    }
+
     fn description() -> &'static str {
         "A list displays a series of items."
     }

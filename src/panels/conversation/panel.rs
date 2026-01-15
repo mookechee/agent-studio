@@ -1098,6 +1098,10 @@ impl DockPanel for ConversationPanel {
         "Conversation"
     }
 
+    fn title_key() -> Option<&'static str> {
+        Some("conversation.title")
+    }
+
     fn description() -> &'static str {
         "Conversation panel using Agent Client Protocol schema with rich UI"
     }

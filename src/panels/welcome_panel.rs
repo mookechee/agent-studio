@@ -77,6 +77,10 @@ impl crate::panels::dock_panel::DockPanel for WelcomePanel {
         "Welcome"
     }
 
+    fn title_key() -> Option<&'static str> {
+        Some("welcome.title")
+    }
+
     fn description() -> &'static str {
         "Welcome panel for creating new tasks"
     }
@@ -1413,7 +1417,7 @@ impl Render for WelcomePanel {
                                     .text_2xl()
                                     .font_semibold()
                                     .text_color(cx.theme().foreground)
-                                    .child(t!("welcome.title").to_string()),
+                                    .child(t!("welcome.main_title").to_string()),
                             )
                             .child(
                                 gpui::div()
