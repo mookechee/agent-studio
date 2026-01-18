@@ -553,7 +553,11 @@ impl WelcomePanel {
                             .unwrap_or(0);
                         agent_select.update(cx, |state, cx| {
                             state.set_items(agent_items, window, cx);
-                            state.set_selected_index(Some(IndexPath::new(selected_index)), window, cx);
+                            state.set_selected_index(
+                                Some(IndexPath::new(selected_index)),
+                                window,
+                                cx,
+                            );
                         });
                         cx.notify();
                     });

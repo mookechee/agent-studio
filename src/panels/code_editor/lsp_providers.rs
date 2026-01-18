@@ -563,8 +563,9 @@ impl TextConvertor {
         let Some(ai_service) = AppState::global(cx).ai_service() else {
             // Show error notification if AI service is not configured
             struct AiServiceError;
-            let note = Notification::error("AI service not configured. Please check your config.json")
-                .id::<AiServiceError>();
+            let note =
+                Notification::error("AI service not configured. Please check your config.json")
+                    .id::<AiServiceError>();
             window.push_notification(note, cx);
             return Task::ready(Err(anyhow!("AI service not configured")));
         };
@@ -589,7 +590,9 @@ impl TextConvertor {
                 let range: lsp_types::Range = match data.get("range") {
                     Some(r) => serde_json::from_value(r.clone()).unwrap(),
                     None => {
-                        return Task::ready(Err(anyhow!("Missing range data for AI comment action")))
+                        return Task::ready(Err(anyhow!(
+                            "Missing range data for AI comment action"
+                        )));
                     }
                 };
 
@@ -601,8 +604,8 @@ impl TextConvertor {
 
                 // Show loading notification
                 struct AiCommentLoading;
-                let loading_note = Notification::info("Generating comment with AI...")
-                    .id::<AiCommentLoading>();
+                let loading_note =
+                    Notification::info("Generating comment with AI...").id::<AiCommentLoading>();
                 window.push_notification(loading_note, cx);
 
                 window.spawn(cx, async move |cx| {
@@ -626,8 +629,9 @@ impl TextConvertor {
 
                                 // Show success notification
                                 struct AiCommentSuccess;
-                                let success_note = Notification::success("Comment generated successfully!")
-                                    .id::<AiCommentSuccess>();
+                                let success_note =
+                                    Notification::success("Comment generated successfully!")
+                                        .id::<AiCommentSuccess>();
                                 window.push_notification(success_note, cx);
                             })?;
 
@@ -646,8 +650,11 @@ impl TextConvertor {
                                     log::debug!("Found active window");
                                     window.update(cx, |_, window, cx| {
                                         log::debug!("Inside window.update, pushing notification");
-                                        let error_note = Notification::error(format!("Failed to generate comment: {}", e))
-                                            .id::<AiCommentError>();
+                                        let error_note = Notification::error(format!(
+                                            "Failed to generate comment: {}",
+                                            e
+                                        ))
+                                        .id::<AiCommentError>();
                                         window.push_notification(error_note, cx);
                                         log::debug!("Notification pushed successfully");
                                     })
@@ -670,8 +677,8 @@ impl TextConvertor {
             "explain" => {
                 // Show loading notification
                 struct AiExplainLoading;
-                let loading_note = Notification::info("Analyzing code with AI...")
-                    .id::<AiExplainLoading>();
+                let loading_note =
+                    Notification::info("Analyzing code with AI...").id::<AiExplainLoading>();
                 window.push_notification(loading_note, cx);
 
                 window.spawn(cx, async move |cx| {

@@ -177,7 +177,7 @@ impl RenderOnce for AgentMessage {
                                     .pr_3(),
                             )
                             .pr_3(),
-                    )
+                    ),
             )
     }
 }

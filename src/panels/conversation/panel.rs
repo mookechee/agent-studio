@@ -4,8 +4,8 @@ use gpui::{
 };
 
 use gpui_component::{
-    ActiveTheme, Icon, IconName, Sizable, StyledExt, h_flex, input::InputState,
-    skeleton::Skeleton, spinner::Spinner, v_flex,
+    ActiveTheme, Icon, IconName, Sizable, StyledExt, h_flex, input::InputState, skeleton::Skeleton,
+    spinner::Spinner, v_flex,
 };
 
 // Use the published ACP schema crate
@@ -28,6 +28,7 @@ use super::{
     helpers::{extract_text_from_content, get_element_id, session_update_type_name},
     rendered_item::{RenderedItem, create_agent_message_data},
     types::ResourceInfo,
+    update_state_manager::{UpdateProcessor, UpdateStateIndex},
 };
 
 /// Session status information for display
@@ -44,6 +45,8 @@ pub struct ConversationPanel {
     focus_handle: FocusHandle,
     /// List of rendered items
     rendered_items: Vec<RenderedItem>,
+    /// Fast index for O(1) lookups (tool calls, streaming messages)
+    update_index: UpdateStateIndex,
     /// Counter for generating unique IDs for new items
     next_index: usize,
     /// Optional session ID to filter updates (None = all sessions)
@@ -132,11 +135,13 @@ impl ConversationPanel {
         let scroll_handle = ScrollHandle::new();
         let input_state = Self::create_input_state(window, cx);
         let rendered_items = Vec::new();
+        let update_index = UpdateStateIndex::new();
         let next_index = rendered_items.len();
 
         Self {
             focus_handle,
             rendered_items,
+            update_index,
             next_index,
             session_id,
             scroll_handle,
@@ -186,28 +191,29 @@ impl ConversationPanel {
                     let _ = cx.update(|cx| {
                         if let Some(entity) = weak.upgrade() {
                             entity.update(cx, |this, cx| {
-                                let mut index = this.next_index;
                                 let agent_name = AppState::global(cx)
                                     .agent_service()
                                     .and_then(|service| service.get_agent_for_session(&session_id));
+
+                                // Use optimized UpdateProcessor for batch loading
                                 for persisted_msg in messages.into_iter() {
                                     log::debug!(
                                         "Loading historical message {}: timestamp={}",
-                                        index,
+                                        this.next_index,
                                         persisted_msg.timestamp
                                     );
-                                    Self::add_update_to_list(
+
+                                    let mut processor = UpdateProcessor::<ConversationPanel>::new(
                                         &mut this.rendered_items,
-                                        persisted_msg.update,
+                                        &mut this.update_index,
                                         Some(session_id.as_str()),
                                         agent_name.as_deref(),
-                                        index,
-                                        cx,
+                                        this.next_index,
                                     );
-                                    index += 1;
-                                }
 
-                                this.next_index = index;
+                                    processor.process_update(persisted_msg.update, cx);
+                                    this.next_index += 1;
+                                }
 
                                 log::info!(
                                     "Loaded history for session {}: {} items, next_index={}",
@@ -312,17 +318,17 @@ impl ConversationPanel {
                 let _ = cx.update(|cx| {
                     if let Some(entity) = weak.upgrade() {
                         entity.update(cx, |this, cx| {
-                            let index = this.next_index;
-                            this.next_index += 1;
-                            // log::debug!("Processing update type: {:?}", update);
-                            Self::add_update_to_list(
+                            // Use optimized UpdateProcessor
+                            let mut processor = UpdateProcessor::<ConversationPanel>::new(
                                 &mut this.rendered_items,
-                                update,
+                                &mut this.update_index,
                                 Some(session_id.as_str()),
                                 agent_name.as_deref(),
-                                index,
-                                cx,
+                                this.next_index,
                             );
+
+                            processor.process_update(update, cx);
+                            this.next_index += 1;
 
                             cx.notify(); // Trigger re-render immediately
 
@@ -606,265 +612,6 @@ impl ConversationPanel {
             self.rendered_items
                 .push(RenderedItem::DiffSummary(diff_summary));
         }
-    }
-
-    /// Helper to add an update to the rendered items list
-    fn add_update_to_list(
-        items: &mut Vec<RenderedItem>,
-        update: SessionUpdate,
-        session_id: Option<&str>,
-        agent_name: Option<&str>,
-        index: usize,
-        cx: &mut App,
-    ) {
-        let update_type = session_update_type_name(&update);
-        log::debug!("Processing SessionUpdate[{}]: {}", index, update_type);
-
-        match update {
-            SessionUpdate::UserMessageChunk(chunk) => {
-                // Mark last message as complete if it was an AgentMessage
-                if let Some(last_item) = items.last_mut() {
-                    if !last_item.can_accept_agent_message_chunk()
-                        && !last_item.can_accept_agent_thought_chunk()
-                    {
-                        // Different type, mark complete
-                        last_item.mark_complete();
-                    }
-                }
-
-                log::debug!("  └─ Creating UserMessage");
-                items.push(Self::create_user_message(chunk, index, cx));
-            }
-            SessionUpdate::AgentMessageChunk(chunk) => {
-                let resolved_agent_name = agent_name
-                    .map(str::to_string)
-                    .or_else(|| {
-                        session_id.and_then(|session_id| {
-                            AppState::global(cx)
-                                .agent_service()
-                                .and_then(|service| service.get_agent_for_session(session_id))
-                        })
-                    });
-
-                // Try to merge with the last AgentMessage item
-                let merged = items
-                    .last_mut()
-                    .map(|last_item| {
-                        if last_item.can_accept_agent_message_chunk() {
-                            let merged = last_item.try_append_agent_message_chunk(chunk.clone());
-                            if merged {
-                                if let (Some(name), RenderedItem::AgentMessage(_, data)) =
-                                    (resolved_agent_name.as_deref(), last_item)
-                                {
-                                    if data.meta.agent_name.is_none() {
-                                        data.meta.agent_name = Some(name.to_string());
-                                    }
-                                }
-                            }
-                            merged
-                        } else {
-                            // Different type, mark the last item as complete
-                            last_item.mark_complete();
-                            false
-                        }
-                    })
-                    .unwrap_or(false);
-
-                if merged {
-                    log::debug!("  └─ Merged AgentMessageChunk into existing message");
-                } else {
-                    log::debug!("  └─ Creating new AgentMessage");
-                    let data = create_agent_message_data(
-                        chunk,
-                        session_id,
-                        resolved_agent_name.as_deref(),
-                    );
-                    items.push(RenderedItem::AgentMessage(
-                        format!("agent-msg-{}", index),
-                        data,
-                    ));
-                }
-            }
-            SessionUpdate::AgentThoughtChunk(chunk) => {
-                let text = extract_text_from_content(&chunk.content);
-
-                // Try to merge with the last AgentThought item
-                let merged = items
-                    .last_mut()
-                    .map(|last_item| {
-                        if last_item.can_accept_agent_thought_chunk() {
-                            last_item.try_append_agent_thought_chunk(text.clone(), cx)
-                        } else {
-                            // Different type, mark the last item as complete
-                            last_item.mark_complete();
-                            false
-                        }
-                    })
-                    .unwrap_or(false);
-
-                if merged {
-                    log::debug!("  └─ Merged AgentThoughtChunk into existing thought");
-                } else {
-                    log::debug!("  └─ Creating new AgentThought");
-                    let entity = cx.new(|_| AgentThoughtItemState::new(text));
-                    items.push(RenderedItem::AgentThought(entity));
-                }
-            }
-            SessionUpdate::ToolCall(tool_call) => {
-                // Check if a ToolCall with this ID already exists
-                let mut found = false;
-                for item in items.iter_mut() {
-                    if let RenderedItem::ToolCall(entity) = item {
-                        let entity_clone = entity.clone();
-                        let matches =
-                            entity_clone.read(cx).tool_call_id() == &tool_call.tool_call_id;
-
-                        if matches {
-                            // Update the existing tool call by replacing it with the new data
-                            entity.update(cx, |state, cx| {
-                                log::debug!(
-                                    "  └─ Updating existing ToolCall: {} (title: {:?} -> {:?})",
-                                    tool_call.tool_call_id,
-                                    state.tool_call().title,
-                                    tool_call.title
-                                );
-                                state.update_tool_call(tool_call.clone(), cx);
-                            });
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-
-                // If no existing ToolCall found, create a new one
-                if !found {
-                    // Mark last message as complete before adding ToolCall
-                    if let Some(last_item) = items.last_mut() {
-                        last_item.mark_complete();
-                    }
-
-                    log::debug!("  └─ Creating new ToolCall: {}", tool_call.tool_call_id);
-                    let entity = cx.new(|_| ToolCallItem::new(tool_call));
-                    items.push(RenderedItem::ToolCall(entity));
-                }
-            }
-            SessionUpdate::ToolCallUpdate(tool_call_update) => {
-                log::debug!("  └─ Updating ToolCall: {}", tool_call_update.tool_call_id);
-                // Find the existing ToolCall entity by ID and update it
-                let mut found = false;
-                for item in items.iter_mut() {
-                    if let RenderedItem::ToolCall(entity) = item {
-                        let entity_clone = entity.clone();
-                        let matches =
-                            entity_clone.read(cx).tool_call_id() == &tool_call_update.tool_call_id;
-
-                        if matches {
-                            // Update the existing tool call
-                            entity.update(cx, |state, cx| {
-                                log::debug!(
-                                    "     ✓ Found and updating ToolCall {} (status: {:?})",
-                                    tool_call_update.tool_call_id,
-                                    tool_call_update.fields.status
-                                );
-                                state.apply_update(tool_call_update.fields.clone(), cx);
-                            });
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-
-                // If no existing ToolCall found, try to create one from the update
-                if !found {
-                    log::warn!(
-                        "     ⚠ ToolCallUpdate for non-existent ID: {}. Attempting to create.",
-                        tool_call_update.tool_call_id
-                    );
-
-                    // Try to convert ToolCallUpdate to ToolCall
-                    match ToolCall::try_from(tool_call_update) {
-                        Ok(tool_call) => {
-                            log::debug!("     ✓ Successfully created ToolCall from update");
-                            let entity = cx.new(|_| ToolCallItem::new(tool_call));
-                            items.push(RenderedItem::ToolCall(entity));
-                        }
-                        Err(e) => {
-                            log::error!("     ✗ Failed to create ToolCall from update: {:?}", e);
-                        }
-                    }
-                }
-            }
-            SessionUpdate::Plan(plan) => {
-                // Mark last message as complete before adding Plan
-                if let Some(last_item) = items.last_mut() {
-                    last_item.mark_complete();
-                }
-
-                log::debug!("  └─ Creating Plan with {} entries", plan.entries.len());
-                items.push(RenderedItem::Plan(plan));
-            }
-            SessionUpdate::AvailableCommandsUpdate(commands_update) => {
-                // Mark last message as complete before adding commands update
-                if let Some(last_item) = items.last_mut() {
-                    last_item.mark_complete();
-                }
-
-                log::debug!(
-                    "  └─ Commands update: {} available",
-                    commands_update.available_commands.len()
-                );
-                items.push(RenderedItem::InfoUpdate(format!(
-                    "📋 Available Commands: {} commands",
-                    commands_update.available_commands.len()
-                )));
-            }
-            SessionUpdate::CurrentModeUpdate(mode_update) => {
-                // Mark last message as complete before adding mode update
-                if let Some(last_item) = items.last_mut() {
-                    last_item.mark_complete();
-                }
-
-                log::debug!("  └─ Mode changed to: {}", mode_update.current_mode_id);
-                items.push(RenderedItem::InfoUpdate(format!(
-                    "🔄 Mode: {}",
-                    mode_update.current_mode_id
-                )));
-            }
-            _ => {
-                log::warn!(
-                    "⚠️  UNHANDLED SessionUpdate type: {}\n\
-                     This update will be ignored. Consider implementing support for this type.\n\
-                     Update details: {:?}",
-                    update_type,
-                    update
-                );
-            }
-        }
-    }
-
-    /// Create a UserMessage RenderedItem from a ContentChunk
-    fn create_user_message(chunk: ContentChunk, _index: usize, cx: &mut App) -> RenderedItem {
-        use crate::UserMessageData;
-
-        let content_vec = vec![chunk.content.clone()];
-        let user_data = UserMessageData::new("default-session").with_contents(content_vec.clone());
-
-        let entity = cx.new(|cx| {
-            let data_entity = cx.new(|_| user_data);
-
-            let resource_items: Vec<Entity<ResourceItemState>> = content_vec
-                .iter()
-                .filter_map(|content| ResourceInfo::from_content_block(content))
-                .map(|resource_info| cx.new(|_| ResourceItemState::new(resource_info)))
-                .collect();
-
-            UserMessageView {
-                data: data_entity,
-                resource_items,
-            }
-        });
-
-        RenderedItem::UserMessage(entity)
     }
 
     /// Handle paste event and add images to pasted_images list
