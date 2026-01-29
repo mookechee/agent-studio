@@ -5,7 +5,7 @@ edition = "2024"
 description = "An Agent Studio - A full-featured desktop AI agent studio built with GPUI"
 license = "Apache-2.0"
 publish = false
-authors = []
+authors = ["AgentX Team <hi@agentx.plus>"]
 readme = "README.md"
 
 [package.metadata.bundle]
