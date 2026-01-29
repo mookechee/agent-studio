@@ -25,3 +25,6 @@ Thumbs.db
 # Debug logs
 debug.log
 *.log
+
+# Git worktrees
+.worktrees/
