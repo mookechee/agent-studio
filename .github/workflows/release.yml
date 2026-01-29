@@ -79,10 +79,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install WiX Toolset
-        run: choco install wixtoolset --no-progress
+        run: choco install wixtoolset --version=3.14.1 --no-progress
 
-      - name: Install cargo-bundle
-        run: cargo install cargo-bundle
+      - name: Install cargo-wix
+        run: cargo install cargo-wix
 
       - name: Build release
         # working-directory: agent-studio
@@ -91,8 +91,8 @@ jobs:
       - name: Create MSI installer
         shell: bash
         run: |
-          cargo bundle --release
-          installer=$(ls target/release/bundle/msi/*.msi | head -n 1)
+          cargo wix --no-build --nocapture
+          installer=$(ls target/wix/*.msi | head -n 1)
           cp "$installer" agentx-windows.msi
 
       - name: Create portable executable

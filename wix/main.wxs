@@ -1,0 +1,141 @@
+<?xml version='1.0' encoding='windows-1252'?>
+<!--
+  AgentX WiX installer definition.
+  Used by cargo-wix to produce Windows MSI packages.
+-->
+<?if $(var.Platform) = x64 ?>
+    <?define ProgramFilesFolder = "ProgramFiles64Folder" ?>
+<?else ?>
+    <?define ProgramFilesFolder = "ProgramFilesFolder" ?>
+<?endif ?>
+
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+
+    <Product
+        Id='*'
+        Name='AgentX'
+        UpgradeCode='B1F2A3C4-D5E6-47F8-9A0B-1C2D3E4F5A6B'
+        Manufacturer='AgentX Team'
+        Language='1033'
+        Codepage='1252'
+        Version='$(var.Version)'>
+
+        <Package Id='*'
+            Keywords='Installer'
+            Description='AgentX - AI Agent Studio'
+            Manufacturer='AgentX Team'
+            InstallerVersion='450'
+            Languages='1033'
+            Compressed='yes'
+            InstallScope='perMachine'
+            SummaryCodepage='1252'
+            Platform='$(var.Platform)' />
+
+        <MajorUpgrade
+            Schedule='afterInstallInitialize'
+            DowngradeErrorMessage='A newer version of [ProductName] is already installed. Setup will now exit.' />
+
+        <Media Id='1' Cabinet='media1.cab' EmbedCab='yes' DiskPrompt='CD-ROM #1' />
+        <Property Id='DiskPrompt' Value='AgentX Installation' />
+
+        <Directory Id='TARGETDIR' Name='SourceDir'>
+            <Directory Id='$(var.ProgramFilesFolder)' Name='PFiles'>
+                <Directory Id='APPLICATIONFOLDER' Name='AgentX'>
+                    <Component Id='binary0' Guid='*'>
+                        <File
+                            Id='exe0'
+                            Name='agentx.exe'
+                            DiskId='1'
+                            Source='target\release\agentx.exe'
+                            KeyPath='yes' />
+                    </Component>
+                    <Component Id='license0' Guid='*'>
+                        <File
+                            Id='license0'
+                            Name='LICENSE'
+                            DiskId='1'
+                            Source='LICENSE'
+                            KeyPath='yes' />
+                    </Component>
+                </Directory>
+            </Directory>
+
+            <Directory Id='ProgramMenuFolder' Name='Programs'>
+                <Directory Id='ApplicationProgramsFolder' Name='AgentX' />
+            </Directory>
+
+            <Directory Id='DesktopFolder' Name='Desktop' />
+        </Directory>
+
+        <DirectoryRef Id='ApplicationProgramsFolder'>
+            <Component Id='ApplicationShortcut' Guid='A7B8C9D0-E1F2-43A4-B5C6-D7E8F9A0B1C2'>
+                <Shortcut Id='ApplicationStartMenuShortcut'
+                    Name='AgentX'
+                    Description='AI Agent Studio'
+                    Target='[#exe0]'
+                    WorkingDirectory='APPLICATIONFOLDER'
+                    Icon='ProductICO' />
+                <RemoveFolder Id='CleanUpShortCut' Directory='ApplicationProgramsFolder' On='uninstall' />
+                <RegistryValue Root='HKCU' Key='Software\AgentX' Name='installed' Type='integer' Value='1' KeyPath='yes' />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id='DesktopFolder'>
+            <Component Id='DesktopShortcut' Guid='C3D4E5F6-A7B8-49C0-D1E2-F3A4B5C6D7E8'>
+                <Shortcut Id='ApplicationDesktopShortcut'
+                    Name='AgentX'
+                    Description='AI Agent Studio'
+                    Target='[#exe0]'
+                    WorkingDirectory='APPLICATIONFOLDER'
+                    Icon='ProductICO' />
+                <RegistryValue Root='HKCU' Key='Software\AgentX' Name='desktopShortcut' Type='integer' Value='1' KeyPath='yes' />
+            </Component>
+        </DirectoryRef>
+
+        <Feature
+            Id='Binaries'
+            Title='Application'
+            Description='Installs AgentX executable and license.'
+            Level='1'
+            ConfigurableDirectory='APPLICATIONFOLDER'
+            AllowAdvertise='no'
+            Display='expand'
+            Absent='disallow'>
+            <ComponentRef Id='binary0' />
+            <ComponentRef Id='license0' />
+
+            <Feature
+                Id='StartMenu'
+                Title='Start Menu Shortcut'
+                Description='Add a shortcut to the Start Menu.'
+                Level='1'
+                Absent='allow'>
+                <ComponentRef Id='ApplicationShortcut' />
+            </Feature>
+
+            <Feature
+                Id='Desktop'
+                Title='Desktop Shortcut'
+                Description='Add a shortcut to the Desktop.'
+                Level='1'
+                Absent='allow'>
+                <ComponentRef Id='DesktopShortcut' />
+            </Feature>
+        </Feature>
+
+        <SetProperty Id='ARPINSTALLLOCATION' Value='[APPLICATIONFOLDER]' After='CostFinalize' />
+
+        <Icon Id='ProductICO' SourceFile='assets\logo.ico' />
+        <Property Id='ARPPRODUCTICON' Value='ProductICO' />
+        <Property Id='ARPHELPLINK' Value='https://agentx.plus' />
+
+        <Property Id='WIXUI_INSTALLDIR' Value='APPLICATIONFOLDER' />
+
+        <UIRef Id='WixUI_InstallDir' />
+        <UIRef Id='WixUI_ErrorProgressText' />
+
+        <WixVariable Id='WixUILicenseRtf' Value='wix\License.rtf' />
+
+    </Product>
+
+</Wix>
