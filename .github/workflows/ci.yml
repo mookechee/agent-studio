@@ -23,6 +23,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            libxdo-dev \
             libgtk-3-dev \
             libglib2.0-dev \
             libcairo2-dev \
