@@ -15,8 +15,8 @@ use std::{
 };
 
 use crate::{
-    assets::get_agent_icon,
     AppSettings, AppState,
+    assets::get_agent_icon,
     core::{
         config::{AgentProcessConfig, Config},
         nodejs::NodeJsChecker,
@@ -783,7 +783,7 @@ impl DockWorkspace {
                     .bg(theme.background)
                     .border_1()
                     .border_color(cx.theme().border)
-                    .text_color(theme.colors.danger_foreground)
+                    .text_color(theme.colors.danger_active)
                     .child(format!("⚠ {}", error)),
             );
         }
@@ -898,7 +898,7 @@ impl DockWorkspace {
                     .bg(theme.background)
                     .border_1()
                     .border_color(theme.border)
-                    .text_color(theme.colors.danger_foreground)
+                    .text_color(theme.colors.danger_active)
                     .child(format!("⚠ {}", error)),
             );
         }
