@@ -202,6 +202,10 @@ jobs:
         if: inputs.channel == 'nightly'
         run: cargo build --release
 
+      - name: Initialize WiX manifest
+        shell: bash
+        run: cargo wix init --force
+
       - name: Create MSI installer
         shell: bash
         run: |
