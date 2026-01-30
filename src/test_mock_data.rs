@@ -60,8 +60,14 @@ mod tests {
 
         for update in variants {
             let json = serde_json::to_string(&update).unwrap();
-            let _parsed: SessionUpdate = serde_json::from_str(&json)
+            let parsed: SessionUpdate = serde_json::from_str(&json)
                 .unwrap_or_else(|e| panic!("Failed to parse {:?}: {}", json, e));
+            // Verify the variant type is preserved after round-trip
+            assert_eq!(
+                std::mem::discriminant(&update),
+                std::mem::discriminant(&parsed),
+                "Variant mismatch after deserialization"
+            );
         }
     }
 }
