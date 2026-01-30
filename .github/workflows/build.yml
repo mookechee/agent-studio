@@ -174,16 +174,16 @@ jobs:
       - name: Install WiX Toolset
         run: choco install wixtoolset --no-progress
 
-      - name: Cache cargo-bundle
-        id: cache-cargo-bundle-windows
+      - name: Cache cargo-wix
+        id: cache-cargo-wix
         uses: actions/cache@v4
         with:
-          path: ~/.cargo/bin/cargo-bundle.exe
-          key: cargo-bundle-${{ runner.os }}-v1
+          path: ~/.cargo/bin/cargo-wix.exe
+          key: cargo-wix-${{ runner.os }}-v1
 
-      - name: Install cargo-bundle
-        if: steps.cache-cargo-bundle-windows.outputs.cache-hit != 'true'
-        run: cargo install cargo-bundle
+      - name: Install cargo-wix
+        if: steps.cache-cargo-wix.outputs.cache-hit != 'true'
+        run: cargo install cargo-wix
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -205,8 +205,8 @@ jobs:
       - name: Create MSI installer
         shell: bash
         run: |
-          cargo bundle --release
-          installer=$(ls target/release/bundle/msi/*.msi | head -n 1)
+          cargo wix --no-build --nocapture
+          installer=$(ls target/wix/*.msi | head -n 1)
           cp "$installer" agentx-${{ inputs.version }}-x86_64-windows.msi
 
       - name: Create portable executable
