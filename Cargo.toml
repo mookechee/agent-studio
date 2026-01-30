@@ -97,6 +97,7 @@ dirs = "6.0"
 # System tray
 tray-icon = "0.19"
 
+# Linux-only: GTK for tray icon initialization
 [target.'cfg(target_os = "linux")'.dependencies]
 gtk = "0.18"
 
