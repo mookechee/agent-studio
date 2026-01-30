@@ -3,6 +3,16 @@ name: Build
 on:
   workflow_call:
     inputs:
+      version:
+        description: 'Version string (e.g., 0.3.0, 0.3.0-beta.1, 0.3.0-nightly.20250130)'
+        required: false
+        default: 'dev'
+        type: string
+      channel:
+        description: 'Release channel (stable, beta, nightly, dev)'
+        required: false
+        default: 'dev'
+        type: string
       upload-artifact:
         description: 'Upload build artifacts'
         required: false
@@ -52,21 +62,31 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Update version in Cargo.toml (nightly only)
+        if: inputs.channel == 'nightly'
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${{ inputs.version }}\"/" Cargo.toml
+
       - name: Build release
+        if: inputs.channel != 'nightly'
         run: cargo build --release --locked
+
+      - name: Build release (nightly, without lock)
+        if: inputs.channel == 'nightly'
+        run: cargo build --release
 
       - name: Create DEB package
         run: |
           cargo bundle --release
           package=$(ls target/release/bundle/deb/*.deb | head -n 1)
-          cp "$package" agentx-linux.deb
+          cp "$package" agentx-${{ inputs.version }}-x86_64-linux.deb
 
       - name: Create tarball
         run: |
-          mkdir -p agentx-linux
-          cp target/release/agentx agentx-linux/
-          chmod +x agentx-linux/agentx
-          tar -czvf agentx-linux.tar.gz agentx-linux
+          mkdir -p agentx-${{ inputs.version }}-x86_64-linux
+          cp target/release/agentx agentx-${{ inputs.version }}-x86_64-linux/
+          chmod +x agentx-${{ inputs.version }}-x86_64-linux/agentx
+          tar -czvf agentx-${{ inputs.version }}-x86_64-linux.tar.gz agentx-${{ inputs.version }}-x86_64-linux
 
       - name: Upload Linux artifact
         if: ${{ inputs.upload-artifact }}
@@ -74,12 +94,12 @@ jobs:
         with:
           name: agentx-linux
           path: |
-            agentx-linux.deb
-            agentx-linux.tar.gz
+            agentx-${{ inputs.version }}-x86_64-linux.deb
+            agentx-${{ inputs.version }}-x86_64-linux.tar.gz
           retention-days: ${{ inputs.artifact-retention-days }}
 
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-latest  # ARM64 (Apple Silicon)
     steps:
       - uses: actions/checkout@v4
 
@@ -100,8 +120,18 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Update version in Cargo.toml (nightly only)
+        if: inputs.channel == 'nightly'
+        run: |
+          sed -i '' "s/^version = \".*\"/version = \"${{ inputs.version }}\"/" Cargo.toml
+
       - name: Build release
+        if: inputs.channel != 'nightly'
         run: cargo build --release --locked
+
+      - name: Build release (nightly, without lock)
+        if: inputs.channel == 'nightly'
+        run: cargo build --release
 
       - name: Create app bundle
         run: cargo bundle --release
@@ -122,7 +152,7 @@ jobs:
             --icon-size 100 \
             --icon "AgentX.app" 150 190 \
             --app-drop-link 450 185 \
-            "agentx-macos.dmg" \
+            "agentx-${{ inputs.version }}-aarch64-macos.dmg" \
             "target/release/bundle/osx/AgentX.app"
 
       - name: Upload macOS artifact
@@ -130,7 +160,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: agentx-macos
-          path: agentx-macos.dmg
+          path: agentx-${{ inputs.version }}-aarch64-macos.dmg
           retention-days: ${{ inputs.artifact-retention-days }}
 
   build-windows:
@@ -158,19 +188,30 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Update version in Cargo.toml (nightly only)
+        if: inputs.channel == 'nightly'
+        shell: pwsh
+        run: |
+          (Get-Content Cargo.toml) -replace '^version = ".*"', 'version = "${{ inputs.version }}"' | Set-Content Cargo.toml
+
       - name: Build release
+        if: inputs.channel != 'nightly'
         run: cargo build --release --locked
+
+      - name: Build release (nightly, without lock)
+        if: inputs.channel == 'nightly'
+        run: cargo build --release
 
       - name: Create MSI installer
         shell: bash
         run: |
           cargo bundle --release
           installer=$(ls target/release/bundle/msi/*.msi | head -n 1)
-          cp "$installer" agentx-windows.msi
+          cp "$installer" agentx-${{ inputs.version }}-x86_64-windows.msi
 
       - name: Create portable executable
         shell: bash
-        run: cp target/release/agentx.exe agentx-windows.exe
+        run: cp target/release/agentx.exe agentx-${{ inputs.version }}-x86_64-windows.exe
 
       - name: Upload Windows artifact
         if: ${{ inputs.upload-artifact }}
@@ -178,6 +219,6 @@ jobs:
         with:
           name: agentx-windows
           path: |
-            agentx-windows.msi
-            agentx-windows.exe
+            agentx-${{ inputs.version }}-x86_64-windows.msi
+            agentx-${{ inputs.version }}-x86_64-windows.exe
           retention-days: ${{ inputs.artifact-retention-days }}
