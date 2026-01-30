@@ -1,7 +1,6 @@
 # Build artifacts
 /target
 *.pdb
-.github
 # Session data
 /sessions
 /docs
@@ -25,3 +24,6 @@ Thumbs.db
 # Debug logs
 debug.log
 *.log
+
+# Worktrees
+.worktrees/
