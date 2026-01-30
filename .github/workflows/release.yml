@@ -12,7 +12,35 @@ on:
         type: string
 
 jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check version consistency
+        run: bash scripts/check-version.sh
+
+      - name: Verify tag matches Cargo.toml version
+        run: |
+          CARGO_VERSION=$(sed -n '/^\[package\]/,/^\[/{ s/^version = "\([^"]*\)"/\1/p }' Cargo.toml | head -1)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG_VERSION="${{ inputs.version }}"
+          else
+            TAG_VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          # 去掉 v 前缀进行比较
+          TAG_VERSION_CLEAN="${TAG_VERSION#v}"
+          if [ "$CARGO_VERSION" != "$TAG_VERSION_CLEAN" ]; then
+            echo "版本不匹配!"
+            echo "  Cargo.toml: $CARGO_VERSION"
+            echo "  Tag:        $TAG_VERSION (${TAG_VERSION_CLEAN})"
+            exit 1
+          fi
+          echo "版本匹配: $CARGO_VERSION = $TAG_VERSION"
+
   build:
+    needs: version-check
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
