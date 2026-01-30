@@ -10,9 +10,105 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.check.outputs.has_changes }}
+      nightly_version: ${{ steps.version.outputs.nightly_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes in last 24 hours
+        id: check
+        run: |
+          # Get commits from the last 24 hours
+          COMMITS=$(git log --since="24 hours ago" --oneline | wc -l)
+          if [ "$COMMITS" -gt 0 ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Found $COMMITS commits in the last 24 hours"
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes in the last 24 hours, skipping nightly build"
+          fi
+
+      - name: Calculate nightly version
+        id: version
+        if: steps.check.outputs.has_changes == 'true'
+        run: |
+          # Get current version from Cargo.toml
+          CURRENT_VERSION=$(sed -n '/^\[package\]/,/^\[/{ s/^version = "\([^"]*\)"/\1/p }' Cargo.toml | head -1)
+
+          # Parse version components (strip any existing prerelease suffix)
+          BASE_VERSION=$(echo $CURRENT_VERSION | cut -d- -f1)
+
+          # Get today's date
+          TODAY=$(date -u +%Y%m%d)
+
+          # Create nightly version (based on current version, not incremented)
+          NIGHTLY_VERSION="${BASE_VERSION}-nightly.${TODAY}"
+
+          echo "nightly_version=$NIGHTLY_VERSION" >> $GITHUB_OUTPUT
+          echo "Nightly version: $NIGHTLY_VERSION (base: $CURRENT_VERSION)"
+
   build:
+    needs: check-changes
+    if: needs.check-changes.outputs.has_changes == 'true'
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
+      version: ${{ needs.check-changes.outputs.nightly_version }}
+      channel: nightly
       upload-artifact: true
       artifact-retention-days: 7
+
+  release:
+    needs: [check-changes, build]
+    if: needs.check-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Delete old nightly release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Delete the existing nightly release if it exists
+          gh release delete nightly --yes --cleanup-tag || true
+          echo "Deleted old nightly release (if existed)"
+
+      - name: Get recent changes
+        id: changes
+        run: |
+          # Get commits from the last 7 days for release notes
+          echo "## Recent Changes" > nightly_notes.md
+          echo "" >> nightly_notes.md
+          git log --since="7 days ago" --pretty=format:"- %s (%h)" >> nightly_notes.md
+          echo "" >> nightly_notes.md
+          echo "" >> nightly_notes.md
+          echo "---" >> nightly_notes.md
+          echo "" >> nightly_notes.md
+          echo "**Warning:** This is a nightly build and may be unstable." >> nightly_notes.md
+          echo "" >> nightly_notes.md
+          echo "Version: \`${{ needs.check-changes.outputs.nightly_version }}\`" >> nightly_notes.md
+
+      - name: Create Nightly Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: AgentX Nightly (${{ needs.check-changes.outputs.nightly_version }})
+          draft: false
+          prerelease: true
+          files: |
+            agentx-macos/agentx-${{ needs.check-changes.outputs.nightly_version }}-aarch64-macos.dmg
+            agentx-windows/agentx-${{ needs.check-changes.outputs.nightly_version }}-x86_64-windows.msi
+            agentx-windows/agentx-${{ needs.check-changes.outputs.nightly_version }}-x86_64-windows.exe
+            agentx-linux/agentx-${{ needs.check-changes.outputs.nightly_version }}-x86_64-linux.deb
+            agentx-linux/agentx-${{ needs.check-changes.outputs.nightly_version }}-x86_64-linux.tar.gz
+          body_path: nightly_notes.md
