@@ -745,8 +745,8 @@ mod tests {
     #[test]
     #[cfg(not(target_os = "windows"))]
     fn test_validate_command_absolute_path_is_directory() {
-        // /tmp exists but is a directory, not a file
-        let result = validate_command("/tmp");
+        let temp_dir = tempfile::tempdir().unwrap();
+        let result = validate_command(temp_dir.path().to_str().unwrap());
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not a file"));
     }
@@ -754,9 +754,22 @@ mod tests {
     #[test]
     #[cfg(not(target_os = "windows"))]
     fn test_validate_command_absolute_path_existing_file() {
-        // /bin/sh should exist on Linux/macOS
-        let result = validate_command("/bin/sh");
-        assert!(result.is_ok(), "Expected /bin/sh to be a valid command");
+        let temp_dir = tempfile::tempdir().unwrap();
+        let exe_path = temp_dir.path().join("test_exe");
+        std::fs::write(&exe_path, "#!/bin/sh\n").unwrap();
+        // Set executable permission
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&exe_path).unwrap().permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&exe_path, perms).unwrap();
+        }
+        let result = validate_command(exe_path.to_str().unwrap());
+        assert!(
+            result.is_ok(),
+            "Expected temp executable to be valid: {:?}",
+            result.unwrap_err()
+        );
     }
 
     #[test]
