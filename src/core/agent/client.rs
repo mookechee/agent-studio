@@ -636,12 +636,19 @@ async fn agent_event_loop(
                 let _ = respond.send(result);
             }
             AgentCommand::NewSession { request, respond } => {
-                log::info!("Agent {} received new_session command with cwd: {:?}", agent_name, request.cwd);
+                log::info!(
+                    "Agent {} received new_session command with cwd: {:?}",
+                    agent_name,
+                    request.cwd
+                );
 
                 // Check if child process is still alive
                 match child.try_wait() {
                     Ok(Some(status)) => {
-                        let error_msg = format!("Agent {} process exited with status: {:?}", agent_name, status);
+                        let error_msg = format!(
+                            "Agent {} process exited with status: {:?}",
+                            agent_name, status
+                        );
                         log::error!("{}", error_msg);
                         let _ = respond.send(Err(anyhow!(error_msg)));
                         continue;
@@ -722,7 +729,11 @@ async fn agent_event_loop(
     // Check if child process is still running
     match child.try_wait() {
         Ok(Some(status)) => {
-            log::warn!("Agent {} process already exited with status: {:?}", agent_name, status);
+            log::warn!(
+                "Agent {} process already exited with status: {:?}",
+                agent_name,
+                status
+            );
         }
         Ok(None) => {
             // Process is still running, kill it

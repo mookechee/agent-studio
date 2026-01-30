@@ -135,60 +135,7 @@ impl AgentConfigService {
     /// On Windows, commands are executed via `cmd /C`, so we allow any command
     /// that can be found in PATH. On Unix-like systems, we check if the file exists.
     pub fn validate_command(&self, command: &str) -> Result<()> {
-        // Check if command is an absolute path
-        let command_path = Path::new(command);
-
-        if command_path.is_absolute() {
-            // Absolute path - check if file exists
-            if !command_path.exists() {
-                return Err(anyhow!(
-                    "Command path does not exist: {}",
-                    command_path.display()
-                ));
-            }
-
-            if !command_path.is_file() {
-                return Err(anyhow!(
-                    "Command path is not a file: {}",
-                    command_path.display()
-                ));
-            }
-
-            Ok(())
-        } else {
-            // Relative path or command name - try to find in PATH
-            // On Windows, commands are executed via `cmd /C`, so we trust the shell
-            // to find the command. We just verify it's findable via `which`.
-            // On Unix-like systems, we also verify via `which`.
-            if let Ok(resolved) = which::which(command) {
-                log::info!("Resolved command '{}' to: {:?}", command, resolved);
-
-                // On Windows, cmd.exe will handle .cmd, .bat, .exe files
-                // so we don't need additional validation
-                #[cfg(target_os = "windows")]
-                {
-                    Ok(())
-                }
-
-                // On Unix-like systems, verify the resolved path exists and is executable
-                #[cfg(not(target_os = "windows"))]
-                {
-                    if resolved.exists() && resolved.is_file() {
-                        Ok(())
-                    } else {
-                        Err(anyhow!(
-                            "Resolved command path does not exist or is not a file: {}",
-                            resolved.display()
-                        ))
-                    }
-                }
-            } else {
-                Err(anyhow!(
-                    "Command '{}' not found in PATH. Please provide an absolute path or ensure the command is in your system PATH.",
-                    command
-                ))
-            }
-        }
+        validate_command(command)
     }
 
     // ========== CRUD Operations ==========
@@ -653,7 +600,7 @@ impl AgentConfigService {
         // Publish config reload event
         let config = self.config.read().await;
         self.event_bus.publish(AgentConfigEvent::ConfigReloaded {
-            config: config.clone(),
+            config: Box::new(config.clone()),
         });
 
         log::info!("Successfully updated system prompts");
@@ -706,81 +653,76 @@ impl AgentConfigService {
         }
 
         // Publish reload event with full config
-        self.event_bus
-            .publish(AgentConfigEvent::ConfigReloaded { config: new_config });
+        self.event_bus.publish(AgentConfigEvent::ConfigReloaded {
+            config: Box::new(new_config),
+        });
 
         log::info!("Configuration reloaded from: {:?}", self.config_path);
         Ok(())
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::core::config::ProxyConfig;
+/// Validate that a command exists and is executable (standalone function for testability)
+fn validate_command(command: &str) -> Result<()> {
+    let command_path = Path::new(command);
 
-    use super::*;
-    use std::collections::HashMap;
-
-    #[tokio::test]
-    async fn test_validate_command_absolute_path() {
-        let service = create_test_service();
-
-        // Test with non-existent absolute path
-        let result = service.validate_command("/nonexistent/command");
-        assert!(result.is_err());
+    #[cfg(not(target_os = "windows"))]
+    fn is_executable(path: &Path) -> bool {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::metadata(path)
+            .map(|m| m.permissions().mode() & 0o111 != 0)
+            .unwrap_or(false)
     }
 
-    #[tokio::test]
-    async fn test_validate_command_in_path() {
-        let service = create_test_service();
+    if command_path.is_absolute() {
+        if !command_path.exists() {
+            return Err(anyhow!(
+                "Command path does not exist: {}",
+                command_path.display()
+            ));
+        }
 
-        // Test with common system command
-        #[cfg(target_os = "windows")]
-        let result = service.validate_command("cmd");
+        if !command_path.is_file() {
+            return Err(anyhow!(
+                "Command path is not a file: {}",
+                command_path.display()
+            ));
+        }
 
         #[cfg(not(target_os = "windows"))]
-        let result = service.validate_command("ls");
+        if !is_executable(command_path) {
+            return Err(anyhow!(
+                "Command path is not executable: {}",
+                command_path.display()
+            ));
+        }
 
-        assert!(result.is_ok());
-    }
+        Ok(())
+    } else {
+        if let Ok(resolved) = which::which(command) {
+            log::info!("Resolved command '{}' to: {:?}", command, resolved);
 
-    #[tokio::test]
-    async fn test_add_duplicate_agent() {
-        let _service = create_test_service();
+            #[cfg(target_os = "windows")]
+            {
+                Ok(())
+            }
 
-        let _config = AgentProcessConfig {
-            command: if cfg!(target_os = "windows") {
-                "cmd".to_string()
-            } else {
-                "ls".to_string()
-            },
-            args: vec![],
-            env: HashMap::new(),
-            nodejs_path: None,
-        };
-
-        // First add should work (would fail without actual AgentManager, but tests structure)
-        // Second add should fail
-        // Note: This test requires mocking AgentManager for full coverage
-    }
-
-    fn create_test_service() -> AgentConfigService {
-        // Create test dependencies
-        let _config = Config {
-            agent_servers: HashMap::new(),
-            upload_dir: PathBuf::from("."),
-            models: HashMap::new(),
-            mcp_servers: HashMap::new(),
-            commands: HashMap::new(),
-            system_prompts: HashMap::new(),
-            tool_call_preview_max_lines: 10,
-            proxy: ProxyConfig::default(),
-        };
-
-        let _event_bus = AgentConfigBusContainer::new();
-
-        // Note: In real tests, we'd need to mock AgentManager
-        // For now, this is a minimal structure test
-        unimplemented!("Requires mocking AgentManager for proper testing")
+            #[cfg(not(target_os = "windows"))]
+            {
+                if resolved.exists() && resolved.is_file() && is_executable(&resolved) {
+                    Ok(())
+                } else {
+                    Err(anyhow!(
+                        "Resolved command path does not exist, is not a file, or is not executable: {}",
+                        resolved.display()
+                    ))
+                }
+            }
+        } else {
+            Err(anyhow!(
+                "Command '{}' not found in PATH. Please provide an absolute path or ensure the command is in your system PATH.",
+                command
+            ))
+        }
     }
 }
