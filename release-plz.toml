@@ -1,0 +1,20 @@
+# release-plz configuration
+# https://release-plz.ieni.dev/docs/config
+
+[workspace]
+# Disable publishing to crates.io (this is a binary application)
+publish = false
+
+# Enable git tag creation
+git_tag_enable = true
+git_tag_name = "v{{ version }}"
+
+# Disable automatic GitHub release creation (handled by release.yml)
+git_release_enable = false
+
+# PR configuration
+pr_draft = false
+pr_labels = ["release"]
+
+# Use git-cliff for changelog generation
+changelog_config = "cliff.toml"
