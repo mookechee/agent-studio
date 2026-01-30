@@ -139,7 +139,7 @@ mod tests {
     #[test]
     fn test_version_ord() {
         // Test full ordering: major > minor > patch
-        let versions = vec![
+        let versions = [
             Version::new(0, 0, 1),
             Version::new(0, 0, 2),
             Version::new(0, 1, 0),

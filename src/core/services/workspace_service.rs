@@ -343,16 +343,15 @@ mod tests {
 
     // ============== Constructor tests ==============
 
-    #[test]
-    fn test_new_with_nonexistent_config() {
+    #[tokio::test]
+    async fn test_new_with_nonexistent_config() {
         let temp_dir = tempfile::tempdir().unwrap();
         let config_path = temp_dir.path().join("nonexistent-config.json");
 
         let service = WorkspaceService::new(config_path);
 
         // Should create with default empty config
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let config = rt.block_on(service.get_config());
+        let config = service.get_config().await;
         assert!(config.workspaces.is_empty());
         assert!(config.tasks.is_empty());
         assert!(config.active_workspace_id.is_none());
