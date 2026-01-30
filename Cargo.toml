@@ -1,6 +1,6 @@
 [package]
 name = "agentx"
-version = "0.5.0"
+version = "0.2.2"
 edition = "2024"
 rust-version = "1.88"
 description = "An Agent Studio - A full-featured desktop AI agent studio built with GPUI"
