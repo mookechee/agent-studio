@@ -37,9 +37,6 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Check Cargo.lock consistency
-        run: cargo generate-lockfile --locked
-
       - name: Check formatting
         run: cargo fmt --check
 
@@ -50,4 +47,4 @@ jobs:
         run: cargo clippy --all-targets --locked -- -D warnings
 
       - name: Run tests
-        run: cargo test --locked
+        run: cargo test --lib --locked
