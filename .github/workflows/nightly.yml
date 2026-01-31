@@ -43,14 +43,23 @@ jobs:
           # Parse version components (strip any existing prerelease suffix)
           BASE_VERSION=$(echo $CURRENT_VERSION | cut -d- -f1)
 
-          # Get today's date
-          TODAY=$(date -u +%Y%m%d)
+          # Get today's date in YYDDD format (year last 2 digits + day of year)
+          # Example: 2026-01-31 -> 26031 (26 = year, 031 = 31st day of year)
+          YEAR=$(date -u +%y)
+          DAY_OF_YEAR=$(date -u +%j)
+          TODAY="${YEAR}${DAY_OF_YEAR}"
+
+          # Verify the version number is within MSI limits (< 65535)
+          if [ "$TODAY" -ge 65535 ]; then
+            echo "Error: Nightly version $TODAY exceeds MSI limit (65534)"
+            exit 1
+          fi
 
           # Create nightly version (based on current version, not incremented)
           NIGHTLY_VERSION="${BASE_VERSION}-nightly.${TODAY}"
 
           echo "nightly_version=$NIGHTLY_VERSION" >> $GITHUB_OUTPUT
-          echo "Nightly version: $NIGHTLY_VERSION (base: $CURRENT_VERSION)"
+          echo "Nightly version: $NIGHTLY_VERSION (base: $CURRENT_VERSION, date code: $TODAY)"
 
   build:
     needs: check-changes
