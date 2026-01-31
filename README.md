@@ -94,12 +94,26 @@ chmod +x agentx-v0.5.0-x86_64.AppImage
 
 Download: `agentx-v{version}-aarch64-macos.dmg` (Apple Silicon) or `agentx-v{version}-x86_64-macos.dmg` (Intel)
 
-```bash
-# Double-click .dmg and drag AgentX to Applications folder
+**⚠️ 首次安装需要授权 Gatekeeper**（详见 [INSTALL.md](INSTALL.md)）
 
-# Using Homebrew (coming soon)
-# brew install --cask agentx
+**快速安装**（推荐）：
+```bash
+# 挂载 DMG 后运行安装脚本
+./install.sh
 ```
+
+**手动安装**：
+```bash
+# 1. 双击 .dmg 并拖动到 Applications
+# 2. 移除隔离属性
+xattr -cr /Applications/AgentX.app
+# 3. 启动应用
+open /Applications/AgentX.app
+```
+
+或**右键点击 AgentX.app > 打开**（仅首次需要）
+
+📖 **详细说明**：[INSTALL.md](INSTALL.md)
 
 </details>
 
@@ -109,6 +123,7 @@ Download: `agentx-v{version}-aarch64-macos.dmg` (Apple Silicon) or `agentx-v{ver
 
 1. **Download** AgentX for your platform from the [releases page](https://github.com/sxhxliang/agent-studio/releases)
 2. **Install** following your OS-specific instructions above
+   - 📖 **macOS 用户**：首次安装请查看 [INSTALL.md](INSTALL.md) 了解如何绕过 Gatekeeper
 3. **Launch** AgentX
 4. **Configure** your AI agent in Settings → MCP Config
 5. **Start chatting** with your agent!
