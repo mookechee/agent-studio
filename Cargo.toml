@@ -34,17 +34,6 @@ long_description = "A full-featured desktop AI agent studio built with GPUI Comp
 homepage = "https://github.com/sxhxliang/agent-studio"
 before_packaging_command = "cargo build --release"
 
-# Windows-specific configuration
-[package.metadata.packager.windows]
-icon_path = "assets/logo.ico"
-
-[package.metadata.packager.nsis]
-installer_icon = "assets/logo.ico"
-
-[package.metadata.packager.wix]
-banner_path = "assets/logo.ico"
-dialog_image_path = "assets/logo.ico"
-
 [package.metadata.i18n]
 available-locales = ["en", "zh-CN"]
 default-locale = "en"
