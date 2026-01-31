@@ -117,7 +117,9 @@ jobs:
           files: |
             agentx-macos/agentx-${{ needs.check-changes.outputs.nightly_version }}-aarch64-macos.dmg
             agentx-windows/agentx-${{ needs.check-changes.outputs.nightly_version }}-x86_64-windows.msi
+            agentx-windows/agentx-${{ needs.check-changes.outputs.nightly_version }}-x86_64-windows-setup.exe
             agentx-windows/agentx-${{ needs.check-changes.outputs.nightly_version }}-x86_64-windows.exe
             agentx-linux/agentx-${{ needs.check-changes.outputs.nightly_version }}-x86_64-linux.deb
+            agentx-linux/agentx-${{ needs.check-changes.outputs.nightly_version }}-x86_64-linux.AppImage
             agentx-linux/agentx-${{ needs.check-changes.outputs.nightly_version }}-x86_64-linux.tar.gz
           body_path: nightly_notes.md

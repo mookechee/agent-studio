@@ -21,6 +21,30 @@ long_description = "A full-featured desktop AI agent studio built with GPUI Comp
 [package.metadata.bundle.windows]
 icon = ["assets/logo.ico"]
 
+# cargo-packager configuration
+[package.metadata.packager]
+product_name = "AgentX"
+identifier = "plus.agentx.app"
+icons = ["assets/logo1024x1024@2x.png", "assets/logo.ico"]
+publisher = "AgentX Team"
+copyright = "Copyright (c) 2025 AgentX. All rights reserved."
+category = "DeveloperTool"
+description = "AI Agent Studio"
+long_description = "A full-featured desktop AI agent studio built with GPUI Component, featuring real-time agent communication, code editing, and multi-session management."
+homepage = "https://github.com/sxhxliang/agent-studio"
+before_packaging_command = "cargo build --release"
+
+# Windows-specific configuration
+[package.metadata.packager.windows]
+icon_path = "assets/logo.ico"
+
+[package.metadata.packager.nsis]
+installer_icon = "assets/logo.ico"
+
+[package.metadata.packager.wix]
+banner_path = "assets/logo.ico"
+dialog_image_path = "assets/logo.ico"
+
 [package.metadata.i18n]
 available-locales = ["en", "zh-CN"]
 default-locale = "en"
